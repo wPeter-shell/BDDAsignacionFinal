@@ -1,14 +1,19 @@
 package com.gui;
 
+import com.dao.AsignaturaDao;
+import com.model.Asignatura;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
 
 /**
  * Pestaña 2: Panel de gestión para el CRUD de Asignaturas.
  * Mapeado exactamente con la tabla [Asignatura] incluyendo Horas Teóricas y Prácticas.
  */
 public class PanelAsignaturas extends JPanel {
+    private final AsignaturaDao asignaturaDao = new AsignaturaDao();
 
     // --- Componentes del Formulario (Inputs Mapeados) ---
     private JTextField txtCodigo;           // Column: [codigo]
@@ -155,5 +160,19 @@ public class PanelAsignaturas extends JPanel {
         spnHorasTeoricas.setValue(2);
         spnHorasPracticas.setValue(2);
         txtCodigo.requestFocus();
+    }
+
+    public void cargarTabla() {
+        modeloTabla.setRowCount(0);
+        List<Asignatura> lista = asignaturaDao.listarTodos();
+        for (Asignatura a : lista) {
+            modeloTabla.addRow(new Object[]{
+                    a.getCodigo(),
+                    a.getNombre(),
+                    a.getCreditos(),
+                    a.getHorasTeoricas(),
+                    a.getHorasPracticas()
+            });
+        }
     }
 }

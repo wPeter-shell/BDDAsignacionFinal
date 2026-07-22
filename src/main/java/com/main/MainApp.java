@@ -1,5 +1,6 @@
 package com.main;
 
+import com.config.Conexion;
 import com.gui.MainFrame;
 import javax.swing.*;
 
@@ -15,6 +16,9 @@ public class MainApp {
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e) {
             System.err.println("No se pudo aplicar el Look and Feel del sistema: " + e.getMessage());
         }
+
+        Conexion conexion = new Conexion();
+        conexion.conectar();
 
         // Iniciar la interfaz gráfica en el hilo de eventos de Swing (Event Dispatch Thread)
         SwingUtilities.invokeLater(() -> {
