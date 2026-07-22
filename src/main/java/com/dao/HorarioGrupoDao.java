@@ -14,41 +14,6 @@ import java.util.List;
 
 public class HorarioGrupoDao {
 
-    public List<HorarioGrupo> listarPorPeriodo(String codigoPeriodo) {
-        List<HorarioGrupo> lista = new ArrayList<>();
-        String sql = "SELECT * FROM Horario_Grupo WHERE codigo_periodo = ?";
-
-        try (Connection con = Conexion.conectar();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setString(1, codigoPeriodo);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    HorarioGrupo h = new HorarioGrupo();
-                    h.setCodigoPeriodo(rs.getString("codigo_periodo").trim());
-                    h.setCodigoAsignatura(rs.getString("codigo_asignatura").trim());
-                    h.setNumeroGrupo(rs.getString("numero_grupo").trim());
-                    h.setDia(rs.getInt("dia"));
-                    h.setHoraInicio(rs.getTime("hora_inicio").toLocalTime());
-                    h.setHoraFin(rs.getTime("hora_fin").toLocalTime());
-
-                    h.setActividad(rs.getString("actividad"));
-                    h.setUsuario(rs.getString("usuario"));
-                    Timestamp ts = rs.getTimestamp("fechahora");
-                    h.setFechaHora(ts != null ? ts.toLocalDateTime() : null);
-
-                    lista.add(h);
-                }
-            }
-
-        } catch (SQLException ex) {
-            System.out.println("Error al listar horarios por período: " + ex.getMessage());
-        }
-
-        return lista;
-    }
-
     public List<HorarioGrupo> listarPorGrupo(String codigoPeriodo, String codigoAsignatura, String numeroGrupo) {
         List<HorarioGrupo> lista = new ArrayList<>();
         String sql = "SELECT * FROM Horario_Grupo WHERE codigo_periodo = ? AND codigo_asignatura = ? AND numero_grupo = ?";
@@ -86,6 +51,41 @@ public class HorarioGrupoDao {
         return lista;
     }
 
+    public List<HorarioGrupo> listarPorPeriodo(String codigoPeriodo) {
+        List<HorarioGrupo> lista = new ArrayList<>();
+        String sql = "SELECT * FROM Horario_Grupo WHERE codigo_periodo = ?";
+
+        try (Connection con = Conexion.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, codigoPeriodo);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    HorarioGrupo h = new HorarioGrupo();
+                    h.setCodigoPeriodo(rs.getString("codigo_periodo").trim());
+                    h.setCodigoAsignatura(rs.getString("codigo_asignatura").trim());
+                    h.setNumeroGrupo(rs.getString("numero_grupo").trim());
+                    h.setDia(rs.getInt("dia"));
+                    h.setHoraInicio(rs.getTime("hora_inicio").toLocalTime());
+                    h.setHoraFin(rs.getTime("hora_fin").toLocalTime());
+
+                    h.setActividad(rs.getString("actividad"));
+                    h.setUsuario(rs.getString("usuario"));
+                    Timestamp ts = rs.getTimestamp("fechahora");
+                    h.setFechaHora(ts != null ? ts.toLocalDateTime() : null);
+
+                    lista.add(h);
+                }
+            }
+
+        } catch (SQLException ex) {
+            System.out.println("Error al listar horarios del periodo: " + ex.getMessage());
+        }
+
+        return lista;
+    }
+
     public boolean insertar(HorarioGrupo h) {
         String sql = "INSERT INTO Horario_Grupo (codigo_periodo, codigo_asignatura, numero_grupo, dia, hora_inicio, hora_fin) "
                 + "VALUES (?, ?, ?, ?, ?, ?)";
@@ -109,13 +109,7 @@ public class HorarioGrupoDao {
     }
 
     public boolean eliminar(String codigoPeriodo, String codigoAsignatura, String numeroGrupo, int dia, java.time.LocalTime horaInicio) {
-        // Convertimos la hora de SQL Server y el parámetro a texto ("HH:mm:ss") con CONVERT
-        String sql = "DELETE FROM Horario_Grupo "
-                + "WHERE codigo_periodo = ? "
-                + "AND codigo_asignatura = ? "
-                + "AND numero_grupo = ? "
-                + "AND dia = ? "
-                + "AND CONVERT(VARCHAR(8), hora_inicio, 108) = ?";
+        String sql = "DELETE FROM Horario_Grupo WHERE codigo_periodo = ? AND codigo_asignatura = ? AND numero_grupo = ? AND dia = ? AND hora_inicio = ?";
 
         try (Connection con = Conexion.conectar();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -124,10 +118,7 @@ public class HorarioGrupoDao {
             ps.setString(2, codigoAsignatura);
             ps.setString(3, numeroGrupo);
             ps.setInt(4, dia);
-
-            // Formateamos LocalTime como String "08:00:00"
-            String horaStr = horaInicio.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
-            ps.setString(5, horaStr);
+            ps.setTime(5, Time.valueOf(horaInicio));
 
             return ps.executeUpdate() > 0;
 

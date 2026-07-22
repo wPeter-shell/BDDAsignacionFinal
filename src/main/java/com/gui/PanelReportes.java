@@ -1,9 +1,16 @@
 package com.gui;
 
+import com.dao.EstudianteDao;
+import com.dao.HorarioCuadriculadoDao;
+import com.dao.PeriodoAcademicoDao;
+import com.model.Estudiante;
+import com.model.PeriodoAcademico;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
 
 /**
  * Pestaña 5: Informe Unificado de Inscripción y Horario Semanal.
@@ -11,15 +18,19 @@ import java.awt.*;
  */
 public class PanelReportes extends JPanel {
 
+    private final EstudianteDao estudianteDao = new EstudianteDao();
+    private final PeriodoAcademicoDao periodoAcademicoDao = new PeriodoAcademicoDao();
+    private final HorarioCuadriculadoDao horarioDao = new HorarioCuadriculadoDao();
+    private JButton btnVerHorario;
     // --- Filtros de Búsqueda ---
-    private JTextField txtIdEstudiante;          // [Estudiante.id]
-    private JComboBox<String> cmbCodigoPeriodo;  // [Periodo_Academico.codigo]
+    private JTextField txtIdEstudiante;
+    private JComboBox<PeriodoAcademico> cmbCodigoPeriodo;
     private JButton btnGenerarReporte;
 
     // --- Datos del Informe (Cabecera) ---
     private JLabel lblPeriodoVal;
-    private JLabel lblEstudianteVal;            // Formato: "10203040 - Pedro A. Martínez P."
-    private JLabel lblCarreraVal;               // Formato: "INSI - Ingeniería en Sistemas"
+    private JLabel lblEstudianteVal;
+    private JLabel lblCarreraVal;
 
     // --- Tabla 1: Informe Detallado de Grupos Inscritos ---
     private JTable tblInformeInscritos;
@@ -38,39 +49,39 @@ public class PanelReportes extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         inicializarComponentes();
+        cargarPeriodos();
+        conectarEventos();
     }
 
     private void inicializarComponentes() {
-        // =========================================================================
-        // 1. FILTROS SUPERIORES (Fuera del documento)
-        // =========================================================================
         JPanel panelFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 5));
-        panelFiltros.setBorder(BorderFactory.createTitledBorder(" Criterios de Selección "));
+        panelFiltros.setBorder(BorderFactory.createTitledBorder(" Criterios de Seleccion "));
 
-        panelFiltros.add(new JLabel("Matrícula / ID:"));
+        panelFiltros.add(new JLabel("Matricula / ID:"));
         txtIdEstudiante = new JTextField(10);
         panelFiltros.add(txtIdEstudiante);
 
-        panelFiltros.add(new JLabel("Período Académico:"));
-        cmbCodigoPeriodo = new JComboBox<>(new String[]{"-- Seleccionar --", "2026-1", "2026-2"});
+        panelFiltros.add(new JLabel("Periodo Academico:"));
+        cmbCodigoPeriodo = new JComboBox<>();
         panelFiltros.add(cmbCodigoPeriodo);
 
-        btnGenerarReporte = new JButton("📄 Generar Informe Completo");
+        btnGenerarReporte = new JButton("Generar Informe Completo");
         btnGenerarReporte.setFont(new Font("Arial", Font.BOLD, 12));
         btnGenerarReporte.setBackground(new Color(220, 235, 252));
         panelFiltros.add(btnGenerarReporte);
 
+        btnVerHorario = new JButton("Ver Horario");
+        btnVerHorario.setFont(new Font("Arial", Font.BOLD, 12));
+        btnVerHorario.setBackground(new Color(220, 252, 225));
+        panelFiltros.add(btnVerHorario);
+
         add(panelFiltros, BorderLayout.NORTH);
 
-        // =========================================================================
-        // 2. CUERPO DEL INFORME (Vista Única e Integrada)
-        // =========================================================================
         JPanel panelDocumento = new JPanel();
         panelDocumento.setLayout(new BoxLayout(panelDocumento, BoxLayout.Y_AXIS));
         panelDocumento.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         panelDocumento.setBackground(Color.WHITE);
 
-        // --- A. Encabezado del Informe ---
         JPanel panelCabecera = new JPanel(new GridLayout(2, 2, 10, 8));
         panelCabecera.setBorder(BorderFactory.createTitledBorder(" 1. Datos Generales de la Prematricula "));
         panelCabecera.setOpaque(false);
@@ -79,7 +90,7 @@ public class PanelReportes extends JPanel {
         lblEstudianteVal.setFont(new Font("Arial", Font.BOLD, 13));
         lblEstudianteVal.setForeground(new Color(20, 70, 150));
 
-        lblPeriodoVal = new JLabel("Período Académico: [Sin Seleccionar]");
+        lblPeriodoVal = new JLabel("Periodo Academico: [Sin Seleccionar]");
         lblPeriodoVal.setFont(new Font("Arial", Font.BOLD, 12));
 
         lblCarreraVal = new JLabel("Carrera: -");
@@ -89,8 +100,7 @@ public class PanelReportes extends JPanel {
         panelCabecera.add(lblPeriodoVal);
         panelCabecera.add(lblCarreraVal);
 
-        // --- B. Tabla de Asignaturas Inscritas ---
-        String[] colInforme = {"Código", "Grupo", "Nombre Asignatura", "Créditos", "Horario Condensado"};
+        String[] colInforme = {"Codigo", "Grupo", "Nombre Asignatura", "Creditos", "Horario Condensado"};
         modeloInforme = new DefaultTableModel(colInforme, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
@@ -100,24 +110,22 @@ public class PanelReportes extends JPanel {
 
         JScrollPane scrollInforme = new JScrollPane(tblInformeInscritos);
         scrollInforme.setBorder(BorderFactory.createTitledBorder(" 2. Detalle de Asignaturas Inscritas "));
-        scrollInforme.setPreferredSize(new Dimension(800, 150));
+        scrollInforme.setPreferredSize(new Dimension(800, 100));
 
-        // --- C. Resumen de Totales ---
         JPanel panelTotales = new JPanel(new FlowLayout(FlowLayout.RIGHT, 30, 5));
         panelTotales.setOpaque(false);
 
         lblTotalGrupos = new JLabel("Total Grupos Inscritos: 0");
         lblTotalGrupos.setFont(new Font("Arial", Font.BOLD, 12));
 
-        lblTotalCreditos = new JLabel("Total Créditos Académicos: 0");
+        lblTotalCreditos = new JLabel("Total Creditos Academicos: 0");
         lblTotalCreditos.setFont(new Font("Arial", Font.BOLD, 13));
         lblTotalCreditos.setForeground(new Color(0, 120, 50));
 
         panelTotales.add(lblTotalGrupos);
         panelTotales.add(lblTotalCreditos);
 
-        // --- D. Matriz Semanal de Horarios (Grid) ---
-        String[] colMatriz = {"Hora", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"};
+        String[] colMatriz = {"Hora", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"};
         modeloMatriz = new DefaultTableModel(colMatriz, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
@@ -134,11 +142,8 @@ public class PanelReportes extends JPanel {
 
         JScrollPane scrollMatriz = new JScrollPane(tblMatrizHorario);
         scrollMatriz.setBorder(BorderFactory.createTitledBorder(" 3. Matriz de Horario Semanal (Grid) "));
-        scrollMatriz.setPreferredSize(new Dimension(800, 250));
+        scrollMatriz.setPreferredSize(new Dimension(800, 480));
 
-        cargarHorariosBase(); // Carga las filas por defecto de 08:00 a 21:00
-
-        // Ensamblar todo el documento en orden descendente
         panelDocumento.add(panelCabecera);
         panelDocumento.add(Box.createVerticalStrut(10));
         panelDocumento.add(scrollInforme);
@@ -146,45 +151,108 @@ public class PanelReportes extends JPanel {
         panelDocumento.add(Box.createVerticalStrut(10));
         panelDocumento.add(scrollMatriz);
 
-        // Poner todo dentro de un JScrollPane general por si la pantalla es pequeña
         JScrollPane scrollGeneral = new JScrollPane(panelDocumento);
         scrollGeneral.getVerticalScrollBar().setUnitIncrement(16);
 
         add(scrollGeneral, BorderLayout.CENTER);
     }
 
-    /**
-     * Llena los bloques de horas de la matriz semanal.
-     */
-    private void cargarHorariosBase() {
-        modeloMatriz.setRowCount(0);
-        String[] bloques = {
-                "08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00",
-                "12:00 - 13:00", "14:00 - 15:00", "15:00 - 16:00", "16:00 - 17:00",
-                "17:00 - 18:00", "18:00 - 19:00", "19:00 - 20:00", "20:00 - 21:00"
-        };
-        for (String b : bloques) {
-            modeloMatriz.addRow(new Object[]{b, "", "", "", "", "", ""});
+    private void cargarPeriodos() {
+        cmbCodigoPeriodo.removeAllItems();
+        for (PeriodoAcademico p : periodoAcademicoDao.listarTodos()) {
+            cmbCodigoPeriodo.addItem(p);
         }
     }
 
-    // ==========================================
-    // GETTERS
-    // ==========================================
-    public String getTxtIdEstudiante() { return txtIdEstudiante.getText().trim(); }
-    public String getCmbCodigoPeriodo() { return cmbCodigoPeriodo.getSelectedItem().toString(); }
+    private void conectarEventos() {
+        btnGenerarReporte.addActionListener(e -> generarInforme());
+        btnVerHorario.addActionListener(e -> verHorario());
+    }
 
-    public JButton getBtnGenerarReporte() { return btnGenerarReporte; }
+    private void generarInforme() {
+        String idEstudiante = txtIdEstudiante.getText().trim();
+        PeriodoAcademico periodo = (PeriodoAcademico) cmbCodigoPeriodo.getSelectedItem();
 
-    public JLabel getLblPeriodoVal() { return lblPeriodoVal; }
-    public JLabel getLblEstudianteVal() { return lblEstudianteVal; }
-    public JLabel getLblCarreraVal() { return lblCarreraVal; }
-    public JLabel getLblTotalGrupos() { return lblTotalGrupos; }
-    public JLabel getLblTotalCreditos() { return lblTotalCreditos; }
+        if (idEstudiante.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Escribe la matricula del estudiante.");
+            return;
+        }
+        if (periodo == null) {
+            JOptionPane.showMessageDialog(this, "Selecciona un periodo academico.");
+            return;
+        }
 
-    public JTable getTblInformeInscritos() { return tblInformeInscritos; }
-    public DefaultTableModel getModeloInforme() { return modeloInforme; }
+        Estudiante estudiante = buscarEstudiante(idEstudiante);
+        if (estudiante == null) {
+            JOptionPane.showMessageDialog(this, "No se encontro un estudiante con esa matricula.");
+            return;
+        }
 
-    public JTable getTblMatrizHorario() { return tblMatrizHorario; }
-    public DefaultTableModel getModeloMatriz() { return modeloMatriz; }
+        String nombreCompleto = estudiante.getNombre() + " " + estudiante.getApellio();
+        lblEstudianteVal.setText("Estudiante: " + estudiante.getId() + " - " + nombreCompleto);
+        lblPeriodoVal.setText("Periodo Academico: " + periodo.getDescripcion());
+        lblCarreraVal.setText("Carrera: " + estudiante.getIdCarrera());
+
+        cargarDetalleInscripcion(idEstudiante, periodo.getCodigo());
+        cargarMatrizHorario(idEstudiante, periodo.getCodigo());
+    }
+
+    private void verHorario() {
+        String idEstudiante = txtIdEstudiante.getText().trim();
+        PeriodoAcademico periodo = (PeriodoAcademico) cmbCodigoPeriodo.getSelectedItem();
+
+        if (idEstudiante.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Escribe la matricula del estudiante.");
+            return;
+        }
+        if (periodo == null) {
+            JOptionPane.showMessageDialog(this, "Selecciona un periodo academico.");
+            return;
+        }
+
+        Estudiante estudiante = buscarEstudiante(idEstudiante);
+        if (estudiante == null) {
+            JOptionPane.showMessageDialog(this, "No se encontro un estudiante con esa matricula.");
+            return;
+        }
+
+        String nombreCompleto = estudiante.getNombre() + " " + estudiante.getApellio();
+        lblEstudianteVal.setText("Estudiante: " + estudiante.getId() + " - " + nombreCompleto);
+        lblPeriodoVal.setText("Periodo Academico: " + periodo.getDescripcion());
+        lblCarreraVal.setText("Carrera: " + estudiante.getIdCarrera());
+
+        cargarMatrizHorario(idEstudiante, periodo.getCodigo());
+    }
+
+    private Estudiante buscarEstudiante(String id) {
+        List<Estudiante> lista = estudianteDao.listarTodos();
+        for (Estudiante e : lista) {
+            if (e.getId().trim().equals(id)) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    private void cargarDetalleInscripcion(String idEstudiante, String codigoPeriodo) {
+        modeloInforme.setRowCount(0);
+        List<Object[]> filas = horarioDao.obtenerDetalleInscripcion(idEstudiante, codigoPeriodo);
+
+        int totalCreditos = 0;
+        for (Object[] fila : filas) {
+            modeloInforme.addRow(fila);
+            totalCreditos += (Integer) fila[3];
+        }
+
+        lblTotalGrupos.setText("Total Grupos Inscritos: " + filas.size());
+        lblTotalCreditos.setText("Total Creditos Academicos: " + totalCreditos);
+    }
+
+    private void cargarMatrizHorario(String idEstudiante, String codigoPeriodo) {
+        modeloMatriz.setRowCount(0);
+        List<Object[]> filas = horarioDao.obtenerMatriz(idEstudiante, codigoPeriodo);
+        for (Object[] fila : filas) {
+            modeloMatriz.addRow(fila);
+        }
+    }
 }

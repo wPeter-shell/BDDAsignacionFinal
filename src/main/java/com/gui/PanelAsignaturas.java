@@ -58,7 +58,7 @@ public class PanelAsignaturas extends JPanel {
 
         // 1. Código
         gbc.gridx = 0; gbc.gridy = 0;
-        panelFormulario.add(new JLabel("Código (codigo):"), gbc);
+        panelFormulario.add(new JLabel("Código:"), gbc);
 
         txtCodigo = new JTextField(12);
         gbc.gridx = 1; gbc.gridy = 0;
@@ -70,7 +70,7 @@ public class PanelAsignaturas extends JPanel {
 
         // 2. Nombre
         gbc.gridx = 0; gbc.gridy = 1;
-        panelFormulario.add(new JLabel("Nombre (nombre):"), gbc);
+        panelFormulario.add(new JLabel("Nombre:"), gbc);
 
         txtNombre = new JTextField(20);
         gbc.gridx = 1; gbc.gridy = 1; gbc.gridwidth = 2;
@@ -78,7 +78,7 @@ public class PanelAsignaturas extends JPanel {
 
         // 3. Créditos
         gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 1;
-        panelFormulario.add(new JLabel("Créditos (creditos):"), gbc);
+        panelFormulario.add(new JLabel("Créditos:"), gbc);
 
         spnCreditos = new JSpinner(new SpinnerNumberModel(3, 1, 10, 1));
         gbc.gridx = 1; gbc.gridy = 2; gbc.gridwidth = 2;
@@ -86,7 +86,7 @@ public class PanelAsignaturas extends JPanel {
 
         // 4. Horas Teóricas
         gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 1;
-        panelFormulario.add(new JLabel("Horas Teóricas (horas_teoricas):"), gbc);
+        panelFormulario.add(new JLabel("Horas Teóricas:"), gbc);
 
         spnHorasTeoricas = new JSpinner(new SpinnerNumberModel(2, 0, 10, 1));
         gbc.gridx = 1; gbc.gridy = 3; gbc.gridwidth = 2;
@@ -94,7 +94,7 @@ public class PanelAsignaturas extends JPanel {
 
         // 5. Horas Prácticas
         gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 1;
-        panelFormulario.add(new JLabel("Horas Prácticas (horas_practicas):"), gbc);
+        panelFormulario.add(new JLabel("Horas Prácticas:"), gbc);
 
         spnHorasPracticas = new JSpinner(new SpinnerNumberModel(2, 0, 10, 1));
         gbc.gridx = 1; gbc.gridy = 4; gbc.gridwidth = 2;
@@ -104,10 +104,10 @@ public class PanelAsignaturas extends JPanel {
         // PANEL DE BOTONES (CRUD)
         // ==========================================
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
-        btnGuardar = new JButton("💾 Guardar");
-        btnActualizar = new JButton("✏️ Actualizar");
-        btnEliminar = new JButton("🗑️ Eliminar");
-        btnLimpiar = new JButton("🧹 Limpiar");
+        btnGuardar = new JButton("Guardar");
+        btnActualizar = new JButton("Actualizar");
+        btnEliminar = new JButton("Eliminar");
+        btnLimpiar = new JButton("Limpiar");
 
         panelBotones.add(btnGuardar);
         panelBotones.add(btnActualizar);
@@ -185,14 +185,37 @@ public class PanelAsignaturas extends JPanel {
     }
 
     private void guardarAsignatura() {
-        if (getTxtCodigo().isEmpty() || getTxtNombre().isEmpty()) {
+        String codigo = getTxtCodigo();
+        String nombre = getTxtNombre();
+
+        if (codigo.isEmpty() || nombre.isEmpty()) {
             JOptionPane.showMessageDialog(this, "⚠️ El Código y el Nombre son obligatorios.", "Atención", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        if (codigo.length() > 8) {
+            JOptionPane.showMessageDialog(this, "⚠️ El maximo de caracteres en Codigo es 8.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (existeNombreDuplicado(nombre, null)) {
+            JOptionPane.showMessageDialog(this, "⚠️ Ya existe una asignatura con ese nombre.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (getSpnCreditos() <= 0) {
+            JOptionPane.showMessageDialog(this, "⚠️ Los creditos deben ser mayores que 0.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (getSpnHorasTeoricas() == 0 && getSpnHorasPracticas() == 0) {
+            JOptionPane.showMessageDialog(this, "⚠️ No puede tener 0 horas teoricas Y 0 horas practicas a la vez.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         Asignatura a = new Asignatura(
-                getTxtCodigo(),
-                getTxtNombre(),
+                codigo,
+                nombre,
                 getSpnCreditos(),
                 getSpnHorasTeoricas(),
                 getSpnHorasPracticas()
@@ -203,7 +226,7 @@ public class PanelAsignaturas extends JPanel {
             cargarTabla();
             limpiarFormulario();
         } else {
-            JOptionPane.showMessageDialog(this, "❌ Error al guardar. Revisa si el código ya existe.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "❌ Error al guardar. Revisa si el codigo ya existe.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -232,7 +255,7 @@ public class PanelAsignaturas extends JPanel {
 
     private void eliminarAsignatura() {
         int fila = tblAsignaturas.getSelectedRow();
-        String codigo = "";
+        String codigo;
 
         if (fila >= 0) {
             codigo = modeloTabla.getValueAt(fila, 0).toString().trim();
@@ -241,27 +264,51 @@ public class PanelAsignaturas extends JPanel {
         }
 
         if (codigo.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "⚠️ Debe ingresar o seleccionar el código de la asignatura a eliminar.", "Atención", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Debe ingresar o seleccionar el codigo de la asignatura a eliminar.", "Atencion", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        List<String> dependencias = asignaturaDao.obtenerDependencias(codigo);
+
+        if (!dependencias.isEmpty()) {
+            StringBuilder mensaje = new StringBuilder("No se puede eliminar esta asignatura porque:\n\n");
+            for (String razon : dependencias) {
+                mensaje.append("- ").append(razon).append("\n");
+            }
+            mensaje.append("\nElimina primero los grupos relacionados.");
+            JOptionPane.showMessageDialog(this, mensaje.toString(), "No se puede eliminar", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         int confirmacion = JOptionPane.showConfirmDialog(
                 this,
-                "¿Está seguro de eliminar la asignatura con código: " + codigo + "?",
-                "Confirmar Eliminación",
+                "Esta seguro de eliminar la asignatura con codigo: " + codigo + "?",
+                "Confirmar Eliminacion",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE
         );
 
         if (confirmacion == JOptionPane.YES_OPTION) {
             if (asignaturaDao.eliminar(codigo)) {
-                JOptionPane.showMessageDialog(this, "🗑️ Asignatura eliminada con éxito.");
+                JOptionPane.showMessageDialog(this, "Asignatura eliminada con exito.");
                 cargarTabla();
                 limpiarFormulario();
             } else {
-                JOptionPane.showMessageDialog(this, "❌ No se pudo eliminar la asignatura.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "No se pudo eliminar la asignatura.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    private boolean existeNombreDuplicado(String nombre, String codigoActual) {
+        List<Asignatura> lista = asignaturaDao.listarTodos();
+        for (Asignatura a : lista) {
+            boolean mismoNombre = a.getNombre().trim().equalsIgnoreCase(nombre.trim());
+            boolean esOtraFila = codigoActual == null || !a.getCodigo().trim().equalsIgnoreCase(codigoActual.trim());
+            if (mismoNombre && esOtraFila) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void limpiarFormulario() {

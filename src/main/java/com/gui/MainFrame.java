@@ -10,7 +10,7 @@ public class MainFrame extends JFrame {
     public MainFrame() {
         // 1. Configuración básica de la ventana
         setTitle("Sistema de Gestión Académica - Universidad");
-        setSize(1200, 750);
+        setSize(1200, 950);
         setMinimumSize(new Dimension(1000, 650));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);

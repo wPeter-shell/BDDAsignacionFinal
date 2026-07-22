@@ -97,4 +97,25 @@ public class AsignaturaDao {
             return false;
         }
     }
+
+    public List<String> obtenerDependencias(String codigo) {
+        List<String> razones = new ArrayList<>();
+        String sql = "SELECT COUNT(*) AS total FROM Grupo WHERE codigo_asignatura = ?";
+
+        try (Connection con = Conexion.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, codigo);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getInt("total") > 0) {
+                    razones.add("Tiene " + rs.getInt("total") + " grupo(s) creado(s) con esta asignatura.");
+                }
+            }
+
+        } catch (SQLException ex) {
+            System.out.println("Error al verificar dependencias de la asignatura: " + ex.getMessage());
+        }
+
+        return razones;
+    }
 }

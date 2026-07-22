@@ -23,6 +23,7 @@ public class MainApp {
         // Iniciar la interfaz gráfica en el hilo de eventos de Swing (Event Dispatch Thread)
         SwingUtilities.invokeLater(() -> {
             MainFrame ventanaPrincipal = new MainFrame();
+            ventanaPrincipal.setExtendedState(JFrame.MAXIMIZED_BOTH);
             ventanaPrincipal.setVisible(true);
         });
     }

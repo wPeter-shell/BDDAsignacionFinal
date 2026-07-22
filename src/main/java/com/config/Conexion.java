@@ -7,7 +7,7 @@ import java.sql.SQLException;
 public class Conexion {
     private static final String URL = "jdbc:sqlserver://127.0.0.1:1433;databaseName=ProyectoFinal;encrypt=false;trustServerCertificate=true;";
     private static final String USUARIO = "admin";
-    private static final String CLAVE = "12345";
+    private static final String CLAVE = "1234";
 
     public static Connection conectar() {
         try {

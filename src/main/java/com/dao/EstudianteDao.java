@@ -110,4 +110,58 @@ public class EstudianteDao {
             return false;
         }
     }
+
+    public String obtenerSiguienteId() {
+        String sql = "SELECT ISNULL(MAX(CAST(id AS BIGINT)), 10150000) + 1 AS siguiente "
+                + "FROM Estudiante WHERE id NOT LIKE '%[^0-9]%'";
+
+        try (Connection con = Conexion.conectar();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                long siguiente = rs.getLong("siguiente");
+                return String.format("%08d", siguiente);
+            }
+
+        } catch (SQLException ex) {
+            System.out.println("Error al obtener siguiente id: " + ex.getMessage());
+        }
+
+        return null;
+    }
+
+    public List<String> obtenerDependencias(String id) {
+        List<String> razones = new ArrayList<>();
+
+        String sqlInscripcion = "SELECT COUNT(*) AS total FROM Inscripcion WHERE id_estudiante = ?";
+        String sqlGrupoInscrito = "SELECT COUNT(*) AS total FROM Grupo_Inscrito WHERE id_estudiante = ?";
+
+        try (Connection con = Conexion.conectar()) {
+
+            try (PreparedStatement ps = con.prepareStatement(sqlInscripcion)) {
+                ps.setString(1, id);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt("total") > 0) {
+                        razones.add("Tiene " + rs.getInt("total") + " inscripcion(es) de periodo registrada(s).");
+                    }
+                }
+            }
+
+            try (PreparedStatement ps = con.prepareStatement(sqlGrupoInscrito)) {
+                ps.setString(1, id);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt("total") > 0) {
+                        razones.add("Tiene " + rs.getInt("total") + " grupo(s) inscrito(s).");
+                    }
+                }
+            }
+
+        } catch (SQLException ex) {
+            System.out.println("Error al verificar dependencias del estudiante: " + ex.getMessage());
+        }
+
+        return razones;
+    }
+
 }
