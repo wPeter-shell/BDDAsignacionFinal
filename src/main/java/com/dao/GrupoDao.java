@@ -14,6 +14,34 @@ import java.util.List;
 
 public class GrupoDao {
 
+    public List<Grupo> listarPorPeriodoYAsignatura(String codigoPeriodo, String codigoAsignatura) {
+        List<Grupo> lista = new ArrayList<>();
+        String sql = "SELECT * FROM Grupo WHERE codigo_periodo = ? AND codigo_asignatura = ?";
+
+        try (Connection con = Conexion.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, codigoPeriodo);
+            ps.setString(2, codigoAsignatura);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Grupo g = new Grupo();
+                    g.setCodigoPeriodo(rs.getString("codigo_periodo").trim());
+                    g.setCodigoAsignatura(rs.getString("codigo_asignatura").trim());
+                    g.setNumero(rs.getString("numero").trim());
+                    g.setCupo(rs.getInt("cupo"));
+                    g.setHorario(rs.getString("horario"));
+                    lista.add(g);
+                }
+            }
+        } catch (SQLException ex) {
+            System.out.println("Error al listar grupos: " + ex.getMessage());
+        }
+
+        return lista;
+    }
+
     public List<Grupo> listarTodos() {
         List<Grupo> lista = new ArrayList<>();
         String sql = "SELECT * FROM Grupo";

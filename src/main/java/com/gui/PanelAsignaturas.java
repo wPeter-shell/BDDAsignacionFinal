@@ -6,6 +6,8 @@ import com.model.Asignatura;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.List;
 
 /**
@@ -13,9 +15,11 @@ import java.util.List;
  * Mapeado exactamente con la tabla [Asignatura] incluyendo Horas Teóricas y Prácticas.
  */
 public class PanelAsignaturas extends JPanel {
+
+    // --- Instancia del DAO ---
     private final AsignaturaDao asignaturaDao = new AsignaturaDao();
 
-    // --- Componentes del Formulario (Inputs Mapeados) ---
+    // --- Componentes del Formulario ---
     private JTextField txtCodigo;           // Column: [codigo]
     private JTextField txtNombre;           // Column: [nombre]
     private JSpinner spnCreditos;           // Column: [creditos]
@@ -38,6 +42,8 @@ public class PanelAsignaturas extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         inicializarComponentes();
+        asignarEventos(); // Conecta todos los botones y eventos de ratón
+        cargarTabla();    // Carga los datos de la BD al abrir la pantalla
     }
 
     private void inicializarComponentes() {
@@ -50,7 +56,7 @@ public class PanelAsignaturas extends JPanel {
         gbc.insets = new Insets(6, 6, 6, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // 1. Código (codigo)
+        // 1. Código
         gbc.gridx = 0; gbc.gridy = 0;
         panelFormulario.add(new JLabel("Código (codigo):"), gbc);
 
@@ -62,7 +68,7 @@ public class PanelAsignaturas extends JPanel {
         gbc.gridx = 2; gbc.gridy = 0;
         panelFormulario.add(btnBuscar, gbc);
 
-        // 2. Nombre (nombre)
+        // 2. Nombre
         gbc.gridx = 0; gbc.gridy = 1;
         panelFormulario.add(new JLabel("Nombre (nombre):"), gbc);
 
@@ -70,7 +76,7 @@ public class PanelAsignaturas extends JPanel {
         gbc.gridx = 1; gbc.gridy = 1; gbc.gridwidth = 2;
         panelFormulario.add(txtNombre, gbc);
 
-        // 3. Créditos (creditos)
+        // 3. Créditos
         gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 1;
         panelFormulario.add(new JLabel("Créditos (creditos):"), gbc);
 
@@ -78,7 +84,7 @@ public class PanelAsignaturas extends JPanel {
         gbc.gridx = 1; gbc.gridy = 2; gbc.gridwidth = 2;
         panelFormulario.add(spnCreditos, gbc);
 
-        // 4. Horas Teóricas (horas_teoricas)
+        // 4. Horas Teóricas
         gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 1;
         panelFormulario.add(new JLabel("Horas Teóricas (horas_teoricas):"), gbc);
 
@@ -86,7 +92,7 @@ public class PanelAsignaturas extends JPanel {
         gbc.gridx = 1; gbc.gridy = 3; gbc.gridwidth = 2;
         panelFormulario.add(spnHorasTeoricas, gbc);
 
-        // 5. Horas Prácticas (horas_practicas)
+        // 5. Horas Prácticas
         gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 1;
         panelFormulario.add(new JLabel("Horas Prácticas (horas_practicas):"), gbc);
 
@@ -108,7 +114,6 @@ public class PanelAsignaturas extends JPanel {
         panelBotones.add(btnEliminar);
         panelBotones.add(btnLimpiar);
 
-        // Agrupar formulario y botones a la izquierda
         JPanel panelIzquierdo = new JPanel(new BorderLayout());
         panelIzquierdo.add(panelFormulario, BorderLayout.CENTER);
         panelIzquierdo.add(panelBotones, BorderLayout.SOUTH);
@@ -120,7 +125,7 @@ public class PanelAsignaturas extends JPanel {
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // Desactivar edición directa en las celdas
+                return false;
             }
         };
 
@@ -134,7 +139,143 @@ public class PanelAsignaturas extends JPanel {
     }
 
     // ==========================================
-    // GETTERS (Alineados con la Lógica DAO)
+    // REGISTRO DE EVENTOS (LISTENERS)
+    // ==========================================
+    private void asignarEventos() {
+        btnGuardar.addActionListener(e -> guardarAsignatura());
+        btnActualizar.addActionListener(e -> actualizarAsignatura());
+        btnEliminar.addActionListener(e -> eliminarAsignatura());
+        btnLimpiar.addActionListener(e -> limpiarFormulario());
+
+        // Evento al hacer clic en una fila de la tabla para cargar los datos en los inputs
+        tblAsignaturas.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int fila = tblAsignaturas.getSelectedRow();
+                if (fila >= 0) {
+                    cargarDatosDesdeTabla(fila);
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // FUNCIONES CRUD
+    // ==========================================
+    public void cargarTabla() {
+        modeloTabla.setRowCount(0);
+        List<Asignatura> lista = asignaturaDao.listarTodos();
+        for (Asignatura a : lista) {
+            modeloTabla.addRow(new Object[]{
+                    a.getCodigo(),
+                    a.getNombre(),
+                    a.getCreditos(),
+                    a.getHorasTeoricas(),
+                    a.getHorasPracticas()
+            });
+        }
+    }
+
+    private void cargarDatosDesdeTabla(int fila) {
+        txtCodigo.setText(modeloTabla.getValueAt(fila, 0).toString());
+        txtNombre.setText(modeloTabla.getValueAt(fila, 1).toString());
+        spnCreditos.setValue(Integer.parseInt(modeloTabla.getValueAt(fila, 2).toString()));
+        spnHorasTeoricas.setValue(Integer.parseInt(modeloTabla.getValueAt(fila, 3).toString()));
+        spnHorasPracticas.setValue(Integer.parseInt(modeloTabla.getValueAt(fila, 4).toString()));
+    }
+
+    private void guardarAsignatura() {
+        if (getTxtCodigo().isEmpty() || getTxtNombre().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "⚠️ El Código y el Nombre son obligatorios.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Asignatura a = new Asignatura(
+                getTxtCodigo(),
+                getTxtNombre(),
+                getSpnCreditos(),
+                getSpnHorasTeoricas(),
+                getSpnHorasPracticas()
+        );
+
+        if (asignaturaDao.insertar(a)) {
+            JOptionPane.showMessageDialog(this, "✅ Asignatura guardada correctamente.");
+            cargarTabla();
+            limpiarFormulario();
+        } else {
+            JOptionPane.showMessageDialog(this, "❌ Error al guardar. Revisa si el código ya existe.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void actualizarAsignatura() {
+        if (getTxtCodigo().isEmpty() || getTxtNombre().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "⚠️ Seleccione un registro de la tabla o escriba un Código y Nombre válidos.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Asignatura a = new Asignatura(
+                getTxtCodigo(),
+                getTxtNombre(),
+                getSpnCreditos(),
+                getSpnHorasTeoricas(),
+                getSpnHorasPracticas()
+        );
+
+        if (asignaturaDao.actualizar(a)) {
+            JOptionPane.showMessageDialog(this, "✅ Asignatura actualizada con éxito.");
+            cargarTabla();
+            limpiarFormulario();
+        } else {
+            JOptionPane.showMessageDialog(this, "❌ Error al actualizar en la base de datos.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void eliminarAsignatura() {
+        int fila = tblAsignaturas.getSelectedRow();
+        String codigo = "";
+
+        if (fila >= 0) {
+            codigo = modeloTabla.getValueAt(fila, 0).toString().trim();
+        } else {
+            codigo = txtCodigo.getText().trim();
+        }
+
+        if (codigo.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "⚠️ Debe ingresar o seleccionar el código de la asignatura a eliminar.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirmacion = JOptionPane.showConfirmDialog(
+                this,
+                "¿Está seguro de eliminar la asignatura con código: " + codigo + "?",
+                "Confirmar Eliminación",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            if (asignaturaDao.eliminar(codigo)) {
+                JOptionPane.showMessageDialog(this, "🗑️ Asignatura eliminada con éxito.");
+                cargarTabla();
+                limpiarFormulario();
+            } else {
+                JOptionPane.showMessageDialog(this, "❌ No se pudo eliminar la asignatura.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    public void limpiarFormulario() {
+        txtCodigo.setText("");
+        txtNombre.setText("");
+        spnCreditos.setValue(3);
+        spnHorasTeoricas.setValue(2);
+        spnHorasPracticas.setValue(2);
+        tblAsignaturas.clearSelection();
+        txtCodigo.requestFocus();
+    }
+
+    // ==========================================
+    // GETTERS
     // ==========================================
     public String getTxtCodigo() { return txtCodigo.getText().trim(); }
     public String getTxtNombre() { return txtNombre.getText().trim(); }
@@ -149,30 +290,4 @@ public class PanelAsignaturas extends JPanel {
     public JButton getBtnBuscar() { return btnBuscar; }
     public JTable getTblAsignaturas() { return tblAsignaturas; }
     public DefaultTableModel getModeloTabla() { return modeloTabla; }
-
-    /**
-     * Limpia los campos del formulario.
-     */
-    public void limpiarFormulario() {
-        txtCodigo.setText("");
-        txtNombre.setText("");
-        spnCreditos.setValue(3);
-        spnHorasTeoricas.setValue(2);
-        spnHorasPracticas.setValue(2);
-        txtCodigo.requestFocus();
-    }
-
-    public void cargarTabla() {
-        modeloTabla.setRowCount(0);
-        List<Asignatura> lista = asignaturaDao.listarTodos();
-        for (Asignatura a : lista) {
-            modeloTabla.addRow(new Object[]{
-                    a.getCodigo(),
-                    a.getNombre(),
-                    a.getCreditos(),
-                    a.getHorasTeoricas(),
-                    a.getHorasPracticas()
-            });
-        }
-    }
 }

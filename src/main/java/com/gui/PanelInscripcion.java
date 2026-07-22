@@ -1,107 +1,105 @@
 package com.gui;
 
+import com.dao.*;
+import com.model.*;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Pestaña 4: Panel de Inscripción / Prematricula de Materias.
- * Utiliza un diseño de Doble Tabla (Disponibles vs Inscritas).
+ * Utiliza Selección de Estudiante por JComboBox y Doble Tabla (Disponibles vs Inscritas).
  */
 public class PanelInscripcion extends JPanel {
 
-    // --- Componentes de Búsqueda y Filtro ---
-    private JTextField txtIdEstudiante;          // [id_estudiante]
-    private JComboBox<String> cmbCodigoPeriodo;  // [codigo_periodo]
-    private JButton btnBuscarEstudiante;
-    private JLabel lblNombreEstudiante;
+    // --- Componentes de Selección ---
+    private JComboBox<String> cmbEstudiante;     // [id_estudiante] - Lista de estudiantes
+    private JComboBox<String> cmbCodigoPeriodo;  // [codigo_periodo] - Lista de períodos
 
     // --- Tablas y Modelos ---
-    private JTable tblMateriasDisponibles;       // Materias ofertadas
+    private JTable tblMateriasDisponibles;       // Materias ofertadas en el período
     private DefaultTableModel modeloDisponibles;
 
-    private JTable tblMateriasInscritas;         // Materias inscritas
+    private JTable tblMateriasInscritas;         // Materias inscritas por el estudiante
     private DefaultTableModel modeloInscritas;
 
     // --- Botones Centrales ---
     private JButton btnAgregarMateria;
     private JButton btnRetirarMateria;
 
+    // --- DAOs ---
+    private final EstudianteDao estudianteDao = new EstudianteDao();
+    private final PeriodoAcademicoDao periodoDao = new PeriodoAcademicoDao();
+    private final GrupoDao grupoDao = new GrupoDao();
+    private final GrupoInscritoDao grupoInscritoDao = new GrupoInscritoDao();
+    private final InscripcionDao inscripcionDao = new InscripcionDao();
+
     public PanelInscripcion() {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         inicializarComponentes();
+        cargarCombos();
+
+        // --- Listeners de Selección Automática ---
+        cmbEstudiante.addActionListener(e -> cargarTablas());
+        cmbCodigoPeriodo.addActionListener(e -> cargarTablas());
+
+        // --- Listeners de Botones ---
+        btnAgregarMateria.addActionListener(e -> inscribirGrupo());
+        btnRetirarMateria.addActionListener(e -> retirarGrupo());
     }
 
     private void inicializarComponentes() {
         // ==========================================
-        // 1. PANEL SUPERIOR: Filtros con UX Mejorado
+        // 1. PANEL SUPERIOR: Filtros con ComboBoxes
         // ==========================================
-        JPanel panelFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        panelFiltros.setBorder(BorderFactory.createTitledBorder(" Inscripción de Estudiante "));
+        JPanel panelFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
+        panelFiltros.setBorder(BorderFactory.createTitledBorder(" Selección de Estudiante y Período "));
 
-        // Matrícula
-        panelFiltros.add(new JLabel("Matrícula:"));
-        txtIdEstudiante = new JTextField(10);
-        panelFiltros.add(txtIdEstudiante);
+        panelFiltros.add(new JLabel("Estudiante:"));
+        cmbEstudiante = new JComboBox<>(new String[]{"-- Seleccionar --"});
+        cmbEstudiante.setPreferredSize(new Dimension(300, 25));
+        panelFiltros.add(cmbEstudiante);
 
-        // Período
         panelFiltros.add(new JLabel("Período:"));
-        cmbCodigoPeriodo = new JComboBox<>(new String[]{"-- Seleccionar --", "2026-1", "2026-2"});
+        cmbCodigoPeriodo = new JComboBox<>(new String[]{"-- Seleccionar --"});
         panelFiltros.add(cmbCodigoPeriodo);
 
-        // Botón Buscar (Ubicado justo al lado del Período para ejecutar la búsqueda)
-        btnBuscarEstudiante = new JButton("🔍 Buscar");
-        panelFiltros.add(btnBuscarEstudiante);
-
-        // Etiqueta de resultado del Estudiante
-        lblNombreEstudiante = new JLabel("Estudiante: [Sin Seleccionar]");
-        lblNombreEstudiante.setFont(new Font("Arial", Font.BOLD, 12));
-        lblNombreEstudiante.setForeground(new Color(30, 80, 150));
-        panelFiltros.add(Box.createHorizontalStrut(15)); // Espaciador visual
-        panelFiltros.add(lblNombreEstudiante);
-
         // ==========================================
-        // 2. PANEL CENTRAL: Las Dos Tablas y Botones
+        // 2. TABLAS (Disponibles vs Inscritas)
         // ==========================================
-        JPanel panelTablas = new JPanel(new GridLayout(1, 2, 10, 0));
+        String[] columnas = {"Asignatura", "Grupo", "Cupo", "Horario General"};
 
-        // --- TABLA IZQUIERDA: Materias Disponibles ---
-        String[] colDisponibles = {"Código", "Asignatura", "Grupo", "Créditos"};
-        modeloDisponibles = new DefaultTableModel(colDisponibles, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+        modeloDisponibles = new DefaultTableModel(columnas, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         tblMateriasDisponibles = new JTable(modeloDisponibles);
-        tblMateriasDisponibles.setRowHeight(22);
         JScrollPane scrollDisponibles = new JScrollPane(tblMateriasDisponibles);
-        scrollDisponibles.setBorder(BorderFactory.createTitledBorder(" Materias Disponibles "));
+        scrollDisponibles.setBorder(BorderFactory.createTitledBorder(" Grupos Disponibles "));
 
-        // --- TABLA DERECHA: Materias Inscritas ---
-        String[] colInscritas = {"Código", "Asignatura", "Grupo", "Créditos"};
-        modeloInscritas = new DefaultTableModel(colInscritas, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+        modeloInscritas = new DefaultTableModel(columnas, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         tblMateriasInscritas = new JTable(modeloInscritas);
-        tblMateriasInscritas.setRowHeight(22);
         JScrollPane scrollInscritas = new JScrollPane(tblMateriasInscritas);
-        scrollInscritas.setBorder(BorderFactory.createTitledBorder(" Materias Inscritas "));
+        scrollInscritas.setBorder(BorderFactory.createTitledBorder(" Grupos Inscritos "));
 
+        JPanel panelTablas = new JPanel(new GridLayout(1, 2, 10, 0));
         panelTablas.add(scrollDisponibles);
         panelTablas.add(scrollInscritas);
 
-        // --- BOTONES CENTRALES DE ACCIÓN ---
+        // ==========================================
+        // 3. BOTONES CENTRALES
+        // ==========================================
         JPanel panelBotonesCentrales = new JPanel();
         panelBotonesCentrales.setLayout(new BoxLayout(panelBotonesCentrales, BoxLayout.Y_AXIS));
-        panelBotonesCentrales.setBorder(BorderFactory.createEmptyBorder(20, 5, 20, 5));
 
-        btnAgregarMateria = new JButton("Inscribir ➡️");
-        btnAgregarMateria.setAlignmentX(Component.CENTER_ALIGNMENT);
-
+        btnAgregarMateria = new JButton("➡️ Inscribir");
         btnRetirarMateria = new JButton("⬅️ Retirar");
-        btnRetirarMateria.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         panelBotonesCentrales.add(Box.createVerticalGlue());
         panelBotonesCentrales.add(btnAgregarMateria);
@@ -119,20 +117,171 @@ public class PanelInscripcion extends JPanel {
     }
 
     // ==========================================
+    // MÉTODOS DE LÓGICA Y CARGA DE DATOS
+    // ==========================================
+
+    public void cargarCombos() {
+        // Cargar Estudiantes
+        cmbEstudiante.removeAllItems();
+        cmbEstudiante.addItem("-- Seleccionar --");
+        for (Estudiante e : estudianteDao.listarTodos()) {
+            cmbEstudiante.addItem(e.getId() + " - " + e.getNombre() + " " + e.getApellio());
+        }
+
+        // Cargar Períodos Académicos
+        cmbCodigoPeriodo.removeAllItems();
+        cmbCodigoPeriodo.addItem("-- Seleccionar --");
+        for (PeriodoAcademico p : periodoDao.listarTodos()) {
+            cmbCodigoPeriodo.addItem(p.getCodigo());
+        }
+    }
+
+    private String obtenerIdEstudiante() {
+        if (cmbEstudiante.getSelectedIndex() <= 0) return null;
+        String seleccion = cmbEstudiante.getSelectedItem().toString();
+        return seleccion.split(" - ")[0].trim();
+    }
+
+    private String obtenerPeriodo() {
+        if (cmbCodigoPeriodo.getSelectedIndex() <= 0) return null;
+        return cmbCodigoPeriodo.getSelectedItem().toString().trim();
+    }
+
+    private void cargarTablas() {
+        modeloDisponibles.setRowCount(0);
+        modeloInscritas.setRowCount(0);
+
+        String idEstudiante = obtenerIdEstudiante();
+        String periodo = obtenerPeriodo();
+
+        if (idEstudiante == null || periodo == null) {
+            return;
+        }
+
+        // 1. Grupos inscritos por el estudiante
+        List<GrupoInscrito> listaInscritos = grupoInscritoDao.listarPorEstudiante(periodo, idEstudiante);
+
+        // 2. Todos los grupos ofertados
+        List<Grupo> todosLosGrupos = grupoDao.listarTodos();
+
+        // Llenar TABLA DERECHA: Grupos Inscritos
+        for (GrupoInscrito gi : listaInscritos) {
+            String horarioGeneral = "-";
+            String cupo = "-";
+
+            for (Grupo g : todosLosGrupos) {
+                if (g.getCodigoPeriodo().equalsIgnoreCase(gi.getCodigoPeriodo()) &&
+                        g.getCodigoAsignatura().equalsIgnoreCase(gi.getCodigoAsignatura()) &&
+                        g.getNumero().equalsIgnoreCase(gi.getNumeroGrupo())) {
+                    horarioGeneral = g.getHorario();
+                    cupo = String.valueOf(g.getCupo());
+                    break;
+                }
+            }
+
+            modeloInscritas.addRow(new Object[]{
+                    gi.getCodigoAsignatura(),
+                    gi.getNumeroGrupo(),
+                    cupo,
+                    horarioGeneral
+            });
+        }
+
+        // Llenar TABLA IZQUIERDA: Grupos Disponibles (del período y que no estén inscritos)
+        for (Grupo g : todosLosGrupos) {
+            if (g.getCodigoPeriodo().equalsIgnoreCase(periodo)) {
+
+                boolean yaInscrito = false;
+                for (GrupoInscrito gi : listaInscritos) {
+                    if (gi.getCodigoAsignatura().equalsIgnoreCase(g.getCodigoAsignatura()) &&
+                            gi.getNumeroGrupo().equalsIgnoreCase(g.getNumero())) {
+                        yaInscrito = true;
+                        break;
+                    }
+                }
+
+                if (!yaInscrito) {
+                    modeloDisponibles.addRow(new Object[]{
+                            g.getCodigoAsignatura(),
+                            g.getNumero(),
+                            g.getCupo(),
+                            g.getHorario()
+                    });
+                }
+            }
+        }
+    }
+
+    private void inscribirGrupo() {
+        int fila = tblMateriasDisponibles.getSelectedRow();
+        if (fila == -1) {
+            JOptionPane.showMessageDialog(this, "⚠️ Seleccione un grupo disponible de la tabla izquierda.");
+            return;
+        }
+
+        String idEstudiante = obtenerIdEstudiante();
+        String periodo = obtenerPeriodo();
+
+        if (idEstudiante == null || periodo == null) {
+            JOptionPane.showMessageDialog(this, "⚠️ Debe seleccionar un Estudiante y un Período.");
+            return;
+        }
+
+        String asignatura = modeloDisponibles.getValueAt(fila, 0).toString();
+        String grupo = modeloDisponibles.getValueAt(fila, 1).toString();
+
+        // Asegurar registro maestro en Inscripcion si aún no existe
+        if (!inscripcionDao.existe(periodo, idEstudiante)) {
+            Inscripcion nuevaInscripcion = new Inscripcion(periodo, idEstudiante, LocalDate.now());
+            inscripcionDao.insertar(nuevaInscripcion);
+        }
+
+        // Insertar en Grupo_Inscrito
+        GrupoInscrito nuevoGrupoInscrito = new GrupoInscrito(periodo, idEstudiante, asignatura, grupo);
+        boolean insertado = grupoInscritoDao.insertar(nuevoGrupoInscrito);
+
+        if (insertado) {
+            JOptionPane.showMessageDialog(this, "✅ Materia inscrita exitosamente.");
+            cargarTablas();
+        } else {
+            JOptionPane.showMessageDialog(this, "❌ Error al inscribir la materia.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void retirarGrupo() {
+        int fila = tblMateriasInscritas.getSelectedRow();
+        if (fila == -1) {
+            JOptionPane.showMessageDialog(this, "⚠️ Seleccione una materia inscrita de la tabla derecha para retirar.");
+            return;
+        }
+
+        String idEstudiante = obtenerIdEstudiante();
+        String periodo = obtenerPeriodo();
+
+        if (idEstudiante == null || periodo == null) return;
+
+        String asignatura = modeloInscritas.getValueAt(fila, 0).toString();
+        String grupo = modeloInscritas.getValueAt(fila, 1).toString();
+
+        boolean eliminado = grupoInscritoDao.eliminar(periodo, idEstudiante, asignatura, grupo);
+
+        if (eliminado) {
+            JOptionPane.showMessageDialog(this, "✅ Materia retirada correctamente.");
+            cargarTablas();
+        } else {
+            JOptionPane.showMessageDialog(this, "❌ No se pudo retirar la materia.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ==========================================
     // GETTERS
     // ==========================================
-    public String getTxtIdEstudiante() { return txtIdEstudiante.getText().trim(); }
-    public String getCmbCodigoPeriodo() { return cmbCodigoPeriodo.getSelectedItem().toString(); }
-
-    public JButton getBtnBuscarEstudiante() { return btnBuscarEstudiante; }
+    public JComboBox<String> getCmbEstudiante() { return cmbEstudiante; }
+    public JComboBox<String> getCmbCodigoPeriodo() { return cmbCodigoPeriodo; }
     public JButton getBtnAgregarMateria() { return btnAgregarMateria; }
     public JButton getBtnRetirarMateria() { return btnRetirarMateria; }
-
-    public JLabel getLblNombreEstudiante() { return lblNombreEstudiante; }
-
     public JTable getTblMateriasDisponibles() { return tblMateriasDisponibles; }
     public DefaultTableModel getModeloDisponibles() { return modeloDisponibles; }
-
     public JTable getTblMateriasInscritas() { return tblMateriasInscritas; }
     public DefaultTableModel getModeloInscritas() { return modeloInscritas; }
 }
