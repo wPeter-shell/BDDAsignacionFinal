@@ -57,6 +57,7 @@ public class PanelHorarios extends JPanel {
         btnGuardar.addActionListener(e -> guardarHorario());
         btnEliminar.addActionListener(e -> eliminarHorarioSeleccionado());
         btnLimpiar.addActionListener(e -> limpiarFormulario());
+        btnBuscar.addActionListener(e -> filtrarHorarios());
     }
 
     private void inicializarComponentes() {
@@ -101,7 +102,7 @@ public class PanelHorarios extends JPanel {
         gbc.gridx = 0; gbc.gridy = 3;
         panelFormulario.add(new JLabel("Día (dia):"), gbc);
 
-        cmbDia = new JComboBox<>(new String[]{"-- Seleccionar --", "1 - Lunes", "2 - Martes", "3 - Miércoles", "4 - Jueves", "5 - Viernes", "6 - Sábado", "7 - Domingo"});
+        cmbDia = new JComboBox<>(new String[]{"-- Seleccionar --", "1 - Lunes", "2 - Martes", "3 - Miércoles", "4 - Jueves", "5 - Viernes", "6 - Sábado"});
         gbc.gridx = 1; gbc.gridy = 3; gbc.gridwidth = 2;
         panelFormulario.add(cmbDia, gbc);
 
@@ -109,7 +110,7 @@ public class PanelHorarios extends JPanel {
         gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 1;
         panelFormulario.add(new JLabel("Hora Inicio:"), gbc);
 
-        spnHoraInicio = new JSpinner(new SpinnerDateModel());
+        spnHoraInicio = crearSpinnerHora(7);
         JSpinner.DateEditor editorInicio = new JSpinner.DateEditor(spnHoraInicio, "HH:mm");
         spnHoraInicio.setEditor(editorInicio);
         gbc.gridx = 1; gbc.gridy = 4; gbc.gridwidth = 2;
@@ -119,7 +120,7 @@ public class PanelHorarios extends JPanel {
         gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 1;
         panelFormulario.add(new JLabel("Hora Fin:"), gbc);
 
-        spnHoraFin = new JSpinner(new SpinnerDateModel());
+        spnHoraFin = crearSpinnerHora(8);
         JSpinner.DateEditor editorFin = new JSpinner.DateEditor(spnHoraFin, "HH:mm");
         spnHoraFin.setEditor(editorFin);
         gbc.gridx = 1; gbc.gridy = 5; gbc.gridwidth = 2;
@@ -369,5 +370,82 @@ public class PanelHorarios extends JPanel {
         } else {
             JOptionPane.showMessageDialog(this, "❌ No se pudo eliminar el registro de la base de datos.", "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    public void filtrarHorarios() {
+        if (cmbCodigoPeriodo.getSelectedIndex() <= 0) {
+            JOptionPane.showMessageDialog(this, "Selecciona un periodo primero.", "Atencion", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String periodo = cmbCodigoPeriodo.getSelectedItem().toString().trim();
+
+        String asignaturaFiltro = null;
+        if (cmbCodigoAsignatura.getSelectedIndex() > 0) {
+            asignaturaFiltro = cmbCodigoAsignatura.getSelectedItem().toString().split(" - ")[0].trim();
+        }
+
+        String grupoFiltro = null;
+        if (cmbNumeroGrupo.getSelectedIndex() > 0) {
+            grupoFiltro = cmbNumeroGrupo.getSelectedItem().toString().trim();
+        }
+
+        List<HorarioGrupo> listaHorarios;
+        if (asignaturaFiltro != null && grupoFiltro != null) {
+            listaHorarios = horarioDao.listarPorGrupo(periodo, asignaturaFiltro, grupoFiltro);
+        } else {
+            listaHorarios = horarioDao.listarPorPeriodo(periodo);
+            if (asignaturaFiltro != null) {
+                String asigFinal = asignaturaFiltro;
+                listaHorarios.removeIf(h -> !h.getCodigoAsignatura().trim().equals(asigFinal));
+            }
+            if (grupoFiltro != null) {
+                String grupoFinal = grupoFiltro;
+                listaHorarios.removeIf(h -> !h.getNumeroGrupo().trim().equals(grupoFinal));
+            }
+        }
+
+        modeloTabla.setRowCount(0);
+        List<DiaSemana> listaDias = diaSemanaDao.listarTodos();
+
+        for (HorarioGrupo h : listaHorarios) {
+            String nombreDia = "Dia " + h.getDia();
+            for (DiaSemana d : listaDias) {
+                if (d.getDia() == h.getDia()) {
+                    nombreDia = d.getDescripcion();
+                    break;
+                }
+            }
+            modeloTabla.addRow(new Object[]{
+                    h.getCodigoPeriodo(), h.getCodigoAsignatura(), h.getNumeroGrupo(),
+                    nombreDia, h.getHoraInicio(), h.getHoraFin()
+            });
+        }
+    }
+
+    private JSpinner crearSpinnerHora(int horaInicial) {
+        java.util.Calendar calMin = java.util.Calendar.getInstance();
+        calMin.set(java.util.Calendar.HOUR_OF_DAY, 7);
+        calMin.set(java.util.Calendar.MINUTE, 0);
+        calMin.set(java.util.Calendar.SECOND, 0);
+        calMin.set(java.util.Calendar.MILLISECOND, 0);
+        Date horaMinima = calMin.getTime();
+
+        java.util.Calendar calMax = java.util.Calendar.getInstance();
+        calMax.set(java.util.Calendar.HOUR_OF_DAY, 22);
+        calMax.set(java.util.Calendar.MINUTE, 0);
+        calMax.set(java.util.Calendar.SECOND, 0);
+        calMax.set(java.util.Calendar.MILLISECOND, 0);
+        Date horaMaxima = calMax.getTime();
+
+        java.util.Calendar calValor = java.util.Calendar.getInstance();
+        calValor.set(java.util.Calendar.HOUR_OF_DAY, horaInicial);
+        calValor.set(java.util.Calendar.MINUTE, 0);
+        calValor.set(java.util.Calendar.SECOND, 0);
+        calValor.set(java.util.Calendar.MILLISECOND, 0);
+        Date valorInicial = calValor.getTime();
+
+        SpinnerDateModel modelo = new SpinnerDateModel(valorInicial, horaMinima, horaMaxima, java.util.Calendar.HOUR_OF_DAY);
+        return new JSpinner(modelo);
     }
 }
