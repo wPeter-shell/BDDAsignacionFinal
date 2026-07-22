@@ -1,7 +1,8 @@
 package com.dao;
 
-import Logic.Estudiante;
-import Conexion.Conexion;
+
+import com.config.Conexion;
+import com.model.Estudiante;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

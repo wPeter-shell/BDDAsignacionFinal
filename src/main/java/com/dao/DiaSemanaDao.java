@@ -1,7 +1,8 @@
 package com.dao;
 
-import Logic.DiaSemana;
-import Conexion.Conexion;
+
+import com.config.Conexion;
+import com.model.DiaSemana;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

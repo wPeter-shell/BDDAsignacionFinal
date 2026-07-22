@@ -1,7 +1,9 @@
 package com.dao;
 
-import Logic.Nacionalidad;
-import Conexion.Conexion;
+
+
+import com.config.Conexion;
+import com.model.Nacionalidad;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

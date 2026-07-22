@@ -1,7 +1,9 @@
 package com.dao;
 
-import Logic.CategoriaPago;
-import Conexion.Conexion;
+
+
+import com.config.Conexion;
+import com.model.CategoriaPago;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

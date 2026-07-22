@@ -1,7 +1,9 @@
 package com.dao;
 
-import Logic.Inscripcion;
-import Conexion.Conexion;
+
+
+import com.config.Conexion;
+import com.model.Inscripcion;
 
 import java.sql.Connection;
 import java.sql.Date;

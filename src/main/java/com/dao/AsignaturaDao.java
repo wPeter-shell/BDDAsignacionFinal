@@ -1,7 +1,8 @@
 package com.dao;
 
-import Logic.Asignatura;
-import Conexion.Conexion;
+
+import com.config.Conexion;
+import com.model.Asignatura;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

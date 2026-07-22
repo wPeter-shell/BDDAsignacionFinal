@@ -1,7 +1,7 @@
 package com.dao;
 
-import Logic.HorarioGrupo;
-import Conexion.Conexion;
+import com.model.HorarioGrupo;
+import com.config.Conexion;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

@@ -1,7 +1,8 @@
 package com.dao;
 
-import Logic.GrupoInscrito;
-import Conexion.Conexion;
+
+import com.config.Conexion;
+import com.model.GrupoInscrito;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

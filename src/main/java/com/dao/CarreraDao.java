@@ -1,7 +1,9 @@
 package com.dao;
 
-import Logic.Carrera;
-import Conexion.Conexion;
+
+
+import com.config.Conexion;
+import com.model.Carrera;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
