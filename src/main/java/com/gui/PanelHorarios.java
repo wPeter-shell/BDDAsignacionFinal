@@ -54,10 +54,11 @@ public class PanelHorarios extends JPanel {
         cargarComboAsignaturas();
 
         // Listeners para los botones
+// Listeners para los botones
         btnGuardar.addActionListener(e -> guardarHorario());
         btnEliminar.addActionListener(e -> eliminarHorarioSeleccionado());
         btnLimpiar.addActionListener(e -> limpiarFormulario());
-        btnBuscar.addActionListener(e -> filtrarHorarios());
+        btnBuscar.addActionListener(e -> buscarHorarios());
     }
 
     private void inicializarComponentes() {
@@ -93,14 +94,9 @@ public class PanelHorarios extends JPanel {
 
         lblNumeroGrupo = new JLabel("-");
         lblNumeroGrupo.setFont(new Font("Arial", Font.BOLD, 13));
-        gbc.gridx = 1; gbc.gridy = 2; gbc.gridwidth = 1;
+        gbc.gridx = 1; gbc.gridy = 2; gbc.gridwidth = 2;
         panelFormulario.add(lblNumeroGrupo, gbc);
 
-        btnBuscar = new JButton("Filtrar");
-        gbc.gridx = 2; gbc.gridy = 2;
-        panelFormulario.add(btnBuscar, gbc);
-
-        // Cupo del grupo (solo se usa si es un grupo nuevo)
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 1;
         panelFormulario.add(new JLabel("Cupo:"), gbc);
 
@@ -143,10 +139,12 @@ public class PanelHorarios extends JPanel {
         btnGuardar = new JButton("Crear Horario");
         btnEliminar = new JButton("Eliminar Horario");
         btnLimpiar = new JButton("Limpiar");
+        btnBuscar = new JButton("Buscar");
 
         panelBotones.add(btnGuardar);
         panelBotones.add(btnEliminar);
         panelBotones.add(btnLimpiar);
+        panelBotones.add(btnBuscar);
 
         JPanel panelIzquierdo = new JPanel(new BorderLayout());
         panelIzquierdo.add(panelFormulario, BorderLayout.CENTER);
@@ -168,7 +166,9 @@ public class PanelHorarios extends JPanel {
         JScrollPane scrollTabla = new JScrollPane(tblHorarios);
         scrollTabla.setBorder(BorderFactory.createTitledBorder(" Lista de Horarios Asignados "));
 
-        cmbCodigoPeriodo.addActionListener(e -> cargarTablaPorPeriodo());
+        tblHorarios.getSelectionModel().addListSelectionListener(e -> cargarSeleccion());
+        cmbCodigoPeriodo.addActionListener(e -> actualizarNumeroAutomatico());
+        cmbCodigoAsignatura.addActionListener(e -> actualizarNumeroAutomatico());
         add(panelIzquierdo, BorderLayout.WEST);
         add(scrollTabla, BorderLayout.CENTER);
     }
@@ -187,7 +187,6 @@ public class PanelHorarios extends JPanel {
     public JButton getBtnGuardar() { return btnGuardar; }
     public JButton getBtnEliminar() { return btnEliminar; }
     public JButton getBtnLimpiar() { return btnLimpiar; }
-    public JButton getBtnBuscar() { return btnBuscar; }
     public JTable getTblHorarios() { return tblHorarios; }
     public DefaultTableModel getModeloTabla() { return modeloTabla; }
 
@@ -246,7 +245,7 @@ public class PanelHorarios extends JPanel {
 
             if (guardado) {
                 JOptionPane.showMessageDialog(this, "Grupo " + grupo + " creado con su horario.");
-                cargarTablaPorPeriodo();
+                buscarHorarios();
                 actualizarNumeroAutomatico();
             } else {
                 JOptionPane.showMessageDialog(this, "No se pudo guardar el horario.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -257,20 +256,34 @@ public class PanelHorarios extends JPanel {
         }
     }
 
-    public void cargarTablaPorPeriodo() {
-        modeloTabla.setRowCount(0);
-
-        if (cmbCodigoPeriodo.getSelectedIndex() <= 0) {
+    public void buscarHorarios() {
+        if (cmbCodigoPeriodo.getSelectedIndex() <= 0 && cmbCodigoAsignatura.getSelectedIndex() <= 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Seleccione un periodo o una asignatura para buscar.",
+                    "Atencion", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        String periodo = cmbCodigoPeriodo.getSelectedItem().toString();
+        modeloTabla.setRowCount(0);
+
+        List<HorarioGrupo> listaHorarios;
+
+        if (cmbCodigoPeriodo.getSelectedIndex() <= 0) {
+            listaHorarios = horarioDao.listarTodos();
+        } else {
+            String periodo = cmbCodigoPeriodo.getSelectedItem().toString().trim();
+            listaHorarios = horarioDao.listarPorPeriodo(periodo);
+        }
+
+        if (cmbCodigoAsignatura.getSelectedIndex() > 0) {
+            String asignaturaFiltro = cmbCodigoAsignatura.getSelectedItem().toString().split(" - ")[0].trim();
+            listaHorarios.removeIf(h -> !h.getCodigoAsignatura().trim().equals(asignaturaFiltro));
+        }
 
         List<DiaSemana> listaDias = diaSemanaDao.listarTodos();
-        List<HorarioGrupo> listaHorarios = horarioDao.listarPorPeriodo(periodo);
 
         for (HorarioGrupo h : listaHorarios) {
-            String nombreDia = "Día " + h.getDia();
+            String nombreDia = "Dia " + h.getDia();
             for (DiaSemana d : listaDias) {
                 if (d.getDia() == h.getDia()) {
                     nombreDia = d.getDescripcion();
@@ -356,7 +369,7 @@ public class PanelHorarios extends JPanel {
 
             if (eliminado) {
                 JOptionPane.showMessageDialog(this, "Horario eliminado correctamente.");
-                cargarTablaPorPeriodo();
+                buscarHorarios();
             } else {
                 JOptionPane.showMessageDialog(this,
                         "No se pudo eliminar. No se encontro ese horario exacto en la base de datos "
@@ -377,42 +390,7 @@ public class PanelHorarios extends JPanel {
         }
     }
 
-    public void filtrarHorarios() {
-        if (cmbCodigoPeriodo.getSelectedIndex() <= 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona un periodo primero.", "Atencion", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
 
-        String periodo = cmbCodigoPeriodo.getSelectedItem().toString().trim();
-
-        String asignaturaFiltro = null;
-        if (cmbCodigoAsignatura.getSelectedIndex() > 0) {
-            asignaturaFiltro = cmbCodigoAsignatura.getSelectedItem().toString().split(" - ")[0].trim();
-        }
-
-        List<HorarioGrupo> listaHorarios = horarioDao.listarPorPeriodo(periodo);
-        if (asignaturaFiltro != null) {
-            String asigFinal = asignaturaFiltro;
-            listaHorarios.removeIf(h -> !h.getCodigoAsignatura().trim().equals(asigFinal));
-        }
-
-        modeloTabla.setRowCount(0);
-        List<DiaSemana> listaDias = diaSemanaDao.listarTodos();
-
-        for (HorarioGrupo h : listaHorarios) {
-            String nombreDia = "Dia " + h.getDia();
-            for (DiaSemana d : listaDias) {
-                if (d.getDia() == h.getDia()) {
-                    nombreDia = d.getDescripcion();
-                    break;
-                }
-            }
-            modeloTabla.addRow(new Object[]{
-                    h.getCodigoPeriodo(), h.getCodigoAsignatura(), h.getNumeroGrupo(),
-                    nombreDia, h.getHoraInicio(), h.getHoraFin()
-            });
-        }
-    }
 
     private JSpinner crearSpinnerHora(int horaInicial) {
         java.util.Calendar calMin = java.util.Calendar.getInstance();
@@ -451,6 +429,32 @@ public class PanelHorarios extends JPanel {
 
         String siguiente = grupoDao.obtenerSiguienteNumero(periodo, asignatura);
         lblNumeroGrupo.setText(siguiente);
+    }
+
+    private void cargarSeleccion() {
+        int fila = tblHorarios.getSelectedRow();
+        if (fila == -1) return;
+
+        String periodo = modeloTabla.getValueAt(fila, 0).toString();
+        String asignatura = modeloTabla.getValueAt(fila, 1).toString();
+        String grupo = modeloTabla.getValueAt(fila, 2).toString();
+
+        for (int i = 0; i < cmbCodigoPeriodo.getItemCount(); i++) {
+            if (cmbCodigoPeriodo.getItemAt(i).equals(periodo)) {
+                cmbCodigoPeriodo.setSelectedIndex(i);
+                break;
+            }
+        }
+
+        for (int i = 0; i < cmbCodigoAsignatura.getItemCount(); i++) {
+            String item = cmbCodigoAsignatura.getItemAt(i);
+            if (item.startsWith(asignatura + " - ")) {
+                cmbCodigoAsignatura.setSelectedIndex(i);
+                break;
+            }
+        }
+
+        lblNumeroGrupo.setText(grupo);
     }
 
     public void recargarCombos() {

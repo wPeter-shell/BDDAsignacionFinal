@@ -13,35 +13,29 @@ import java.awt.*;
 import java.util.List;
 
 /**
- * Pestaña 5: Informe Unificado de Inscripción y Horario Semanal.
- * Muestra toda la información de la prematricula en una sola vista continua.
+ * Pestana 5: Informe Unificado de Inscripcion y Horario Semanal.
+ * Muestra toda la informacion de la prematricula en una sola vista continua.
  */
 public class PanelReportes extends JPanel {
 
     private final EstudianteDao estudianteDao = new EstudianteDao();
     private final PeriodoAcademicoDao periodoAcademicoDao = new PeriodoAcademicoDao();
     private final HorarioCuadriculadoDao horarioDao = new HorarioCuadriculadoDao();
-    private JButton btnVerHorario;
-    // --- Filtros de Búsqueda ---
-    private JTextField txtIdEstudiante;
+
     private JComboBox<Estudiante> cmbEstudiante;
     private JComboBox<PeriodoAcademico> cmbCodigoPeriodo;
     private JButton btnGenerarReporte;
 
-    // --- Datos del Informe (Cabecera) ---
     private JLabel lblPeriodoVal;
     private JLabel lblEstudianteVal;
     private JLabel lblCarreraVal;
 
-    // --- Tabla 1: Informe Detallado de Grupos Inscritos ---
     private JTable tblInformeInscritos;
     private DefaultTableModel modeloInforme;
 
-    // --- Tabla 2: Matriz Semanal de Horario ---
     private JTable tblMatrizHorario;
     private DefaultTableModel modeloMatriz;
 
-    // --- Pie del Informe ---
     private JLabel lblTotalGrupos;
     private JLabel lblTotalCreditos;
 
@@ -59,13 +53,9 @@ public class PanelReportes extends JPanel {
         JPanel panelFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 5));
         panelFiltros.setBorder(BorderFactory.createTitledBorder(" Criterios de Seleccion "));
 
-        panelFiltros.add(new JLabel("Matricula / ID:"));
-        txtIdEstudiante = new JTextField(10);
-        panelFiltros.add(txtIdEstudiante);
-
         panelFiltros.add(new JLabel("Estudiante:"));
         cmbEstudiante = new JComboBox<>();
-        cmbEstudiante.setPreferredSize(new Dimension(220, cmbEstudiante.getPreferredSize().height));
+        cmbEstudiante.setPreferredSize(new Dimension(240, cmbEstudiante.getPreferredSize().height));
         cmbEstudiante.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -87,11 +77,6 @@ public class PanelReportes extends JPanel {
         btnGenerarReporte.setFont(new Font("Arial", Font.BOLD, 12));
         btnGenerarReporte.setBackground(new Color(220, 235, 252));
         panelFiltros.add(btnGenerarReporte);
-
-        btnVerHorario = new JButton("Ver Horario");
-        btnVerHorario.setFont(new Font("Arial", Font.BOLD, 12));
-        btnVerHorario.setBackground(new Color(220, 252, 225));
-        panelFiltros.add(btnVerHorario);
 
         add(panelFiltros, BorderLayout.NORTH);
 
@@ -128,7 +113,9 @@ public class PanelReportes extends JPanel {
 
         JScrollPane scrollInforme = new JScrollPane(tblInformeInscritos);
         scrollInforme.setBorder(BorderFactory.createTitledBorder(" 2. Detalle de Asignaturas Inscritas "));
-        scrollInforme.setPreferredSize(new Dimension(800, 100));
+        scrollInforme.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollInforme.setPreferredSize(new Dimension(800, 150));
+        scrollInforme.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
 
         JPanel panelTotales = new JPanel(new FlowLayout(FlowLayout.RIGHT, 30, 5));
         panelTotales.setOpaque(false);
@@ -196,21 +183,14 @@ public class PanelReportes extends JPanel {
 
     private void conectarEventos() {
         btnGenerarReporte.addActionListener(e -> generarInforme());
-        btnVerHorario.addActionListener(e -> verHorario());
-        cmbEstudiante.addActionListener(e -> {
-            Estudiante seleccionado = (Estudiante) cmbEstudiante.getSelectedItem();
-            if (seleccionado != null) {
-                txtIdEstudiante.setText(seleccionado.getId());
-            }
-        });
     }
 
     private void generarInforme() {
-        String idEstudiante = txtIdEstudiante.getText().trim();
+        Estudiante estudiante = (Estudiante) cmbEstudiante.getSelectedItem();
         PeriodoAcademico periodo = (PeriodoAcademico) cmbCodigoPeriodo.getSelectedItem();
 
-        if (idEstudiante.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Escribe la matricula del estudiante.");
+        if (estudiante == null) {
+            JOptionPane.showMessageDialog(this, "Selecciona un estudiante.");
             return;
         }
         if (periodo == null) {
@@ -218,56 +198,14 @@ public class PanelReportes extends JPanel {
             return;
         }
 
-        Estudiante estudiante = buscarEstudiante(idEstudiante);
-        if (estudiante == null) {
-            JOptionPane.showMessageDialog(this, "No se encontro un estudiante con esa matricula.");
-            return;
-        }
-
-        String nombreCompleto = estudiante.getNombre() + " " + estudiante.getApellio();
+        String idEstudiante = estudiante.getId();
+        String nombreCompleto = formatearNombreCompleto(estudiante);
         lblEstudianteVal.setText("Estudiante: " + estudiante.getId() + " - " + nombreCompleto);
         lblPeriodoVal.setText("Periodo Academico: " + periodo.getDescripcion());
         lblCarreraVal.setText("Carrera: " + estudiante.getIdCarrera());
 
         cargarDetalleInscripcion(idEstudiante, periodo.getCodigo());
         cargarMatrizHorario(idEstudiante, periodo.getCodigo());
-    }
-
-    private void verHorario() {
-        String idEstudiante = txtIdEstudiante.getText().trim();
-        PeriodoAcademico periodo = (PeriodoAcademico) cmbCodigoPeriodo.getSelectedItem();
-
-        if (idEstudiante.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Escribe la matricula del estudiante.");
-            return;
-        }
-        if (periodo == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona un periodo academico.");
-            return;
-        }
-
-        Estudiante estudiante = buscarEstudiante(idEstudiante);
-        if (estudiante == null) {
-            JOptionPane.showMessageDialog(this, "No se encontro un estudiante con esa matricula.");
-            return;
-        }
-
-        String nombreCompleto = estudiante.getNombre() + " " + estudiante.getApellio();
-        lblEstudianteVal.setText("Estudiante: " + estudiante.getId() + " - " + nombreCompleto);
-        lblPeriodoVal.setText("Periodo Academico: " + periodo.getDescripcion());
-        lblCarreraVal.setText("Carrera: " + estudiante.getIdCarrera());
-
-        cargarMatrizHorario(idEstudiante, periodo.getCodigo());
-    }
-
-    private Estudiante buscarEstudiante(String id) {
-        List<Estudiante> lista = estudianteDao.listarTodos();
-        for (Estudiante e : lista) {
-            if (e.getId().trim().equals(id)) {
-                return e;
-            }
-        }
-        return null;
     }
 
     private void cargarDetalleInscripcion(String idEstudiante, String codigoPeriodo) {
@@ -290,5 +228,26 @@ public class PanelReportes extends JPanel {
         for (Object[] fila : filas) {
             modeloMatriz.addRow(fila);
         }
+    }
+
+    private String formatearNombreCompleto(Estudiante e) {
+        String nombreFormateado = abreviarPalabrasExtra(e.getNombre());
+        String apellidoFormateado = abreviarPalabrasExtra(e.getApellio());
+        return nombreFormateado + " " + apellidoFormateado;
+    }
+
+    private String abreviarPalabrasExtra(String textoCompleto) {
+        if (textoCompleto == null || textoCompleto.trim().isEmpty()) {
+            return "";
+        }
+
+        String[] palabras = textoCompleto.trim().split("\\s+");
+        StringBuilder resultado = new StringBuilder(palabras[0]);
+
+        for (int i = 1; i < palabras.length; i++) {
+            resultado.append(" ").append(palabras[i].charAt(0)).append(".");
+        }
+
+        return resultado.toString();
     }
 }

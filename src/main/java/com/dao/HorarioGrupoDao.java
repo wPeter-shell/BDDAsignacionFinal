@@ -127,4 +127,36 @@ public class HorarioGrupoDao {
             return false;
         }
     }
+
+    public List<HorarioGrupo> listarTodos() {
+        List<HorarioGrupo> lista = new ArrayList<>();
+        String sql = "SELECT * FROM Horario_Grupo";
+
+        try (Connection con = Conexion.conectar();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                HorarioGrupo h = new HorarioGrupo();
+                h.setCodigoPeriodo(rs.getString("codigo_periodo").trim());
+                h.setCodigoAsignatura(rs.getString("codigo_asignatura").trim());
+                h.setNumeroGrupo(rs.getString("numero_grupo").trim());
+                h.setDia(rs.getInt("dia"));
+                h.setHoraInicio(rs.getTime("hora_inicio").toLocalTime());
+                h.setHoraFin(rs.getTime("hora_fin").toLocalTime());
+
+                h.setActividad(rs.getString("actividad"));
+                h.setUsuario(rs.getString("usuario"));
+                Timestamp ts = rs.getTimestamp("fechahora");
+                h.setFechaHora(ts != null ? ts.toLocalDateTime() : null);
+
+                lista.add(h);
+            }
+
+        } catch (SQLException ex) {
+            System.out.println("Error al listar todos los horarios: " + ex.getMessage());
+        }
+
+        return lista;
+    }
 }
