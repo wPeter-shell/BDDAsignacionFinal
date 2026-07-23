@@ -24,6 +24,7 @@ public class PanelReportes extends JPanel {
     private JButton btnVerHorario;
     // --- Filtros de Búsqueda ---
     private JTextField txtIdEstudiante;
+    private JComboBox<Estudiante> cmbEstudiante;
     private JComboBox<PeriodoAcademico> cmbCodigoPeriodo;
     private JButton btnGenerarReporte;
 
@@ -50,6 +51,7 @@ public class PanelReportes extends JPanel {
 
         inicializarComponentes();
         cargarPeriodos();
+        cargarEstudiantes();
         conectarEventos();
     }
 
@@ -60,6 +62,22 @@ public class PanelReportes extends JPanel {
         panelFiltros.add(new JLabel("Matricula / ID:"));
         txtIdEstudiante = new JTextField(10);
         panelFiltros.add(txtIdEstudiante);
+
+        panelFiltros.add(new JLabel("Estudiante:"));
+        cmbEstudiante = new JComboBox<>();
+        cmbEstudiante.setPreferredSize(new Dimension(220, cmbEstudiante.getPreferredSize().height));
+        cmbEstudiante.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Estudiante) {
+                    Estudiante e = (Estudiante) value;
+                    setText(e.getId() + " - " + e.getNombre() + " " + e.getApellio());
+                }
+                return this;
+            }
+        });
+        panelFiltros.add(cmbEstudiante);
 
         panelFiltros.add(new JLabel("Periodo Academico:"));
         cmbCodigoPeriodo = new JComboBox<>();
@@ -157,6 +175,13 @@ public class PanelReportes extends JPanel {
         add(scrollGeneral, BorderLayout.CENTER);
     }
 
+    private void cargarEstudiantes() {
+        cmbEstudiante.removeAllItems();
+        for (Estudiante e : estudianteDao.listarTodos()) {
+            cmbEstudiante.addItem(e);
+        }
+    }
+
     private void cargarPeriodos() {
         cmbCodigoPeriodo.removeAllItems();
         for (PeriodoAcademico p : periodoAcademicoDao.listarTodos()) {
@@ -164,9 +189,20 @@ public class PanelReportes extends JPanel {
         }
     }
 
+    public void recargarCombos() {
+        cargarPeriodos();
+        cargarEstudiantes();
+    }
+
     private void conectarEventos() {
         btnGenerarReporte.addActionListener(e -> generarInforme());
         btnVerHorario.addActionListener(e -> verHorario());
+        cmbEstudiante.addActionListener(e -> {
+            Estudiante seleccionado = (Estudiante) cmbEstudiante.getSelectedItem();
+            if (seleccionado != null) {
+                txtIdEstudiante.setText(seleccionado.getId());
+            }
+        });
     }
 
     private void generarInforme() {

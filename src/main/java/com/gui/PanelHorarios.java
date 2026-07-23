@@ -20,8 +20,9 @@ public class PanelHorarios extends JPanel {
     // --- Componentes de Selección (Combos y Spinners de Hora) ---
     private JComboBox<String> cmbCodigoPeriodo;   // [codigo_periodo]
     private JComboBox<String> cmbCodigoAsignatura;// [codigo_asignatura]
-    private JComboBox<String> cmbNumeroGrupo;     // [numero_grupo]
-    private JComboBox<String> cmbDia;             // [dia]
+    private JLabel lblNumeroGrupo;
+    private JComboBox<String> cmbDia;   // [dia]
+    private JSpinner spnCupo;
 
     // 🚀 Uso de JSpinner para selección adecuada de horas
     private JSpinner spnHoraInicio;               // [hora_inicio]
@@ -51,7 +52,6 @@ public class PanelHorarios extends JPanel {
         inicializarComponentes();
         cargarComboPeriodos();
         cargarComboAsignaturas();
-        cargarComboGrupos();
 
         // Listeners para los botones
         btnGuardar.addActionListener(e -> guardarHorario());
@@ -72,7 +72,7 @@ public class PanelHorarios extends JPanel {
 
         // 1. Período Académico (codigo_periodo)
         gbc.gridx = 0; gbc.gridy = 0;
-        panelFormulario.add(new JLabel("Período (codigo_periodo):"), gbc);
+        panelFormulario.add(new JLabel("Período:"), gbc);
 
         cmbCodigoPeriodo = new JComboBox<>(new String[]{"-- Seleccionar --"});
         gbc.gridx = 1; gbc.gridy = 0; gbc.gridwidth = 2;
@@ -80,27 +80,37 @@ public class PanelHorarios extends JPanel {
 
         // 2. Asignatura (codigo_asignatura)
         gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 1;
-        panelFormulario.add(new JLabel("Asignatura (codigo_asignatura):"), gbc);
+        panelFormulario.add(new JLabel("Asignatura:"), gbc);
 
         cmbCodigoAsignatura = new JComboBox<>(new String[]{"-- Seleccionar --"});
         gbc.gridx = 1; gbc.gridy = 1; gbc.gridwidth = 2;
         panelFormulario.add(cmbCodigoAsignatura, gbc);
 
         // 3. Número de Grupo (numero_grupo)
+// 3. Numero de Grupo (automatico, no editable)
         gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 1;
-        panelFormulario.add(new JLabel("Número Grupo (numero_grupo):"), gbc);
+        panelFormulario.add(new JLabel("Numero Grupo:"), gbc);
 
-        cmbNumeroGrupo = new JComboBox<>(new String[]{"-- Seleccionar --"});
+        lblNumeroGrupo = new JLabel("-");
+        lblNumeroGrupo.setFont(new Font("Arial", Font.BOLD, 13));
         gbc.gridx = 1; gbc.gridy = 2; gbc.gridwidth = 1;
-        panelFormulario.add(cmbNumeroGrupo, gbc);
+        panelFormulario.add(lblNumeroGrupo, gbc);
 
-        btnBuscar = new JButton("🔍 Filtrar");
+        btnBuscar = new JButton("Filtrar");
         gbc.gridx = 2; gbc.gridy = 2;
         panelFormulario.add(btnBuscar, gbc);
 
+        // Cupo del grupo (solo se usa si es un grupo nuevo)
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 1;
+        panelFormulario.add(new JLabel("Cupo:"), gbc);
+
+        spnCupo = new JSpinner(new SpinnerNumberModel(30, 1, 100, 1));
+        gbc.gridx = 1; gbc.gridy = 6; gbc.gridwidth = 2;
+        panelFormulario.add(spnCupo, gbc);
+
         // 4. Día de la Semana (dia)
         gbc.gridx = 0; gbc.gridy = 3;
-        panelFormulario.add(new JLabel("Día (dia):"), gbc);
+        panelFormulario.add(new JLabel("Día:"), gbc);
 
         cmbDia = new JComboBox<>(new String[]{"-- Seleccionar --", "1 - Lunes", "2 - Martes", "3 - Miércoles", "4 - Jueves", "5 - Viernes", "6 - Sábado"});
         gbc.gridx = 1; gbc.gridy = 3; gbc.gridwidth = 2;
@@ -130,9 +140,9 @@ public class PanelHorarios extends JPanel {
         // PANEL BOTONES
         // ==========================================
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
-        btnGuardar = new JButton("💾 Crear Horario");
-        btnEliminar = new JButton("🗑️ Eliminar Horario");
-        btnLimpiar = new JButton("🧹 Limpiar");
+        btnGuardar = new JButton("Crear Horario");
+        btnEliminar = new JButton("Eliminar Horario");
+        btnLimpiar = new JButton("Limpiar");
 
         panelBotones.add(btnGuardar);
         panelBotones.add(btnEliminar);
@@ -168,7 +178,7 @@ public class PanelHorarios extends JPanel {
     // ==========================================
     public String getCmbCodigoPeriodo() { return cmbCodigoPeriodo.getSelectedItem() != null ? cmbCodigoPeriodo.getSelectedItem().toString() : ""; }
     public String getCmbCodigoAsignatura() { return cmbCodigoAsignatura.getSelectedItem() != null ? cmbCodigoAsignatura.getSelectedItem().toString() : ""; }
-    public String getCmbNumeroGrupo() { return cmbNumeroGrupo.getSelectedItem() != null ? cmbNumeroGrupo.getSelectedItem().toString() : ""; }
+    public String getLblNumeroGrupo() { return lblNumeroGrupo.getText(); }
     public String getCmbDia() { return cmbDia.getSelectedItem() != null ? cmbDia.getSelectedItem().toString() : ""; }
 
     public JSpinner getSpnHoraInicio() { return spnHoraInicio; }
@@ -187,11 +197,10 @@ public class PanelHorarios extends JPanel {
     public void limpiarFormulario() {
         if (cmbCodigoPeriodo.getItemCount() > 0) cmbCodigoPeriodo.setSelectedIndex(0);
         if (cmbCodigoAsignatura.getItemCount() > 0) cmbCodigoAsignatura.setSelectedIndex(0);
-        if (cmbNumeroGrupo.getItemCount() > 0) cmbNumeroGrupo.setSelectedIndex(0);
         if (cmbDia.getItemCount() > 0) cmbDia.setSelectedIndex(0);
 
-        spnHoraInicio.setValue(new Date());
-        spnHoraFin.setValue(new Date());
+        lblNumeroGrupo.setText("-");
+        spnCupo.setValue(30);
     }
 
     /**
@@ -200,56 +209,51 @@ public class PanelHorarios extends JPanel {
     public void guardarHorario() {
         if (cmbCodigoPeriodo.getSelectedIndex() <= 0 ||
                 cmbCodigoAsignatura.getSelectedIndex() <= 0 ||
-                cmbNumeroGrupo.getSelectedIndex() <= 0 ||
                 cmbDia.getSelectedIndex() <= 0) {
 
             JOptionPane.showMessageDialog(this,
-                    "⚠️ Por favor, complete todos los campos de selección (Período, Asignatura, Grupo y Día).",
+                    "Por favor, complete Periodo, Asignatura y Dia.",
                     "Campos Incompletos", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         try {
             String periodo = cmbCodigoPeriodo.getSelectedItem().toString().trim();
-
             String asignaturaCombo = cmbCodigoAsignatura.getSelectedItem().toString();
             String asignatura = asignaturaCombo.split(" - ")[0].trim();
-
-            String grupo = cmbNumeroGrupo.getSelectedItem().toString().trim();
-
-            // Extraer el número de día del combo (Ej: "1 - Lunes" -> 1)
+            String grupo = lblNumeroGrupo.getText().trim();
             int dia = cmbDia.getSelectedIndex();
 
-            // Convertir las horas de los JSpinner a LocalTime
             Date dateInicio = (Date) spnHoraInicio.getValue();
             LocalTime horaInicio = dateInicio.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
 
             Date dateFin = (Date) spnHoraFin.getValue();
             LocalTime horaFin = dateFin.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
 
-            // Validar que la hora fin sea posterior a la de inicio
             if (!horaFin.isAfter(horaInicio)) {
                 JOptionPane.showMessageDialog(this,
-                        "⚠️ La hora de fin debe ser posterior a la hora de inicio.",
-                        "Hora Inválida", JOptionPane.WARNING_MESSAGE);
+                        "La hora de fin debe ser posterior a la hora de inicio.",
+                        "Hora Invalida", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            // Crear objeto modelo
-            HorarioGrupo nuevoHorario = new HorarioGrupo(periodo, asignatura, grupo, dia, horaInicio, horaFin);
+            int cupo = (Integer) spnCupo.getValue();
+            Grupo nuevoGrupo = new Grupo(periodo, asignatura, grupo, cupo, "Pendiente");
+            grupoDao.insertar(nuevoGrupo);
 
-            // Guardar con tu DAO
+            HorarioGrupo nuevoHorario = new HorarioGrupo(periodo, asignatura, grupo, dia, horaInicio, horaFin);
             boolean guardado = horarioDao.insertar(nuevoHorario);
 
             if (guardado) {
-                JOptionPane.showMessageDialog(this, "✅ Horario guardado correctamente.");
+                JOptionPane.showMessageDialog(this, "Grupo " + grupo + " creado con su horario.");
                 cargarTablaPorPeriodo();
+                actualizarNumeroAutomatico();
             } else {
-                JOptionPane.showMessageDialog(this, "❌ No se pudo guardar el horario en la base de datos.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "No se pudo guardar el horario.", "Error", JOptionPane.ERROR_MESSAGE);
             }
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "⚠️ Ocurrió un error al procesar el horario: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this, "Ocurrio un error al procesar el horario: " + ex.getMessage());
         }
     }
 
@@ -305,70 +309,71 @@ public class PanelHorarios extends JPanel {
         }
     }
 
-    public void cargarComboGrupos() {
-        cmbNumeroGrupo.removeAllItems();
-        cmbNumeroGrupo.addItem("-- Seleccionar --");
-
-        List<Grupo> lista = grupoDao.listarTodos();
-
-        for (Grupo g : lista) {
-            String numero = g.getNumero();
-
-            boolean existe = false;
-            for (int i = 0; i < cmbNumeroGrupo.getItemCount(); i++) {
-                if (cmbNumeroGrupo.getItemAt(i).equals(numero)) {
-                    existe = true;
-                    break;
-                }
-            }
-
-            if (!existe) {
-                cmbNumeroGrupo.addItem(numero);
-            }
-        }
-    }
 
     public void eliminarHorarioSeleccionado() {
         int fila = tblHorarios.getSelectedRow();
         if (fila == -1) {
             JOptionPane.showMessageDialog(this,
-                    "⚠️ Por favor, seleccione un horario de la tabla para eliminar.",
-                    "Atención", JOptionPane.WARNING_MESSAGE);
+                    "Por favor, seleccione un horario de la tabla para eliminar.",
+                    "Atencion", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         int confirmacion = JOptionPane.showConfirmDialog(this,
-                "¿Está seguro de que desea eliminar el horario seleccionado?",
-                "Confirmar eliminación", JOptionPane.YES_NO_OPTION);
+                "Esta seguro de que desea eliminar el horario seleccionado?",
+                "Confirmar eliminacion", JOptionPane.YES_NO_OPTION);
 
         if (confirmacion != JOptionPane.YES_OPTION) {
             return;
         }
 
-        String periodo = modeloTabla.getValueAt(fila, 0).toString();
-        String asignatura = modeloTabla.getValueAt(fila, 1).toString();
-        String grupo = modeloTabla.getValueAt(fila, 2).toString();
-        String nombreDia = modeloTabla.getValueAt(fila, 3).toString();
-        String horaInicioStr = modeloTabla.getValueAt(fila, 4).toString();
+        try {
+            String periodo = modeloTabla.getValueAt(fila, 0).toString();
+            String asignatura = modeloTabla.getValueAt(fila, 1).toString();
+            String grupo = modeloTabla.getValueAt(fila, 2).toString();
+            String nombreDia = modeloTabla.getValueAt(fila, 3).toString();
+            String horaInicioStr = modeloTabla.getValueAt(fila, 4).toString();
 
-        int diaNumero = 1;
-        List<DiaSemana> listaDias = diaSemanaDao.listarTodos();
-        for (DiaSemana d : listaDias) {
-            if (d.getDescripcion().equalsIgnoreCase(nombreDia)) {
-                diaNumero = d.getDia();
-                break;
+            int diaNumero = -1;
+            List<DiaSemana> listaDias = diaSemanaDao.listarTodos();
+            for (DiaSemana d : listaDias) {
+                if (d.getDescripcion().trim().equalsIgnoreCase(nombreDia.trim())) {
+                    diaNumero = d.getDia();
+                    break;
+                }
             }
-        }
 
-        java.time.LocalTime horaInicio = java.time.LocalTime.parse(horaInicioStr);
+            if (diaNumero == -1) {
+                JOptionPane.showMessageDialog(this,
+                        "No se pudo identificar el dia '" + nombreDia + "' en la tabla Dia_Semana.",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-        boolean eliminado = horarioDao.eliminar(periodo, asignatura, grupo, diaNumero, horaInicio);
+            java.time.LocalTime horaInicio = java.time.LocalTime.parse(horaInicioStr);
 
-        if (eliminado) {
-            JOptionPane.showMessageDialog(this, "✅ Horario eliminado correctamente.");
-            cargarTablaPorPeriodo();
-        } else {
-            JOptionPane.showMessageDialog(this, "❌ No se pudo eliminar el registro de la base de datos.", "Error", JOptionPane.ERROR_MESSAGE);
+            boolean eliminado = horarioDao.eliminar(periodo, asignatura, grupo, diaNumero, horaInicio);
+
+            if (eliminado) {
+                JOptionPane.showMessageDialog(this, "Horario eliminado correctamente.");
+                cargarTablaPorPeriodo();
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "No se pudo eliminar. No se encontro ese horario exacto en la base de datos "
+                                + "(periodo=" + periodo + ", asignatura=" + asignatura + ", grupo=" + grupo
+                                + ", dia=" + diaNumero + ", hora=" + horaInicio + "). "
+                                + "Puede que ya haya sido eliminado por otra sesion.",
+                        "No se pudo eliminar", JOptionPane.WARNING_MESSAGE);
+            }
+
+        } catch (java.time.format.DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "No se pudo interpretar la hora del horario seleccionado: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Ocurrio un error inesperado al eliminar: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -385,24 +390,10 @@ public class PanelHorarios extends JPanel {
             asignaturaFiltro = cmbCodigoAsignatura.getSelectedItem().toString().split(" - ")[0].trim();
         }
 
-        String grupoFiltro = null;
-        if (cmbNumeroGrupo.getSelectedIndex() > 0) {
-            grupoFiltro = cmbNumeroGrupo.getSelectedItem().toString().trim();
-        }
-
-        List<HorarioGrupo> listaHorarios;
-        if (asignaturaFiltro != null && grupoFiltro != null) {
-            listaHorarios = horarioDao.listarPorGrupo(periodo, asignaturaFiltro, grupoFiltro);
-        } else {
-            listaHorarios = horarioDao.listarPorPeriodo(periodo);
-            if (asignaturaFiltro != null) {
-                String asigFinal = asignaturaFiltro;
-                listaHorarios.removeIf(h -> !h.getCodigoAsignatura().trim().equals(asigFinal));
-            }
-            if (grupoFiltro != null) {
-                String grupoFinal = grupoFiltro;
-                listaHorarios.removeIf(h -> !h.getNumeroGrupo().trim().equals(grupoFinal));
-            }
+        List<HorarioGrupo> listaHorarios = horarioDao.listarPorPeriodo(periodo);
+        if (asignaturaFiltro != null) {
+            String asigFinal = asignaturaFiltro;
+            listaHorarios.removeIf(h -> !h.getCodigoAsignatura().trim().equals(asigFinal));
         }
 
         modeloTabla.setRowCount(0);
@@ -448,4 +439,23 @@ public class PanelHorarios extends JPanel {
         SpinnerDateModel modelo = new SpinnerDateModel(valorInicial, horaMinima, horaMaxima, java.util.Calendar.HOUR_OF_DAY);
         return new JSpinner(modelo);
     }
+
+    private void actualizarNumeroAutomatico() {
+        if (cmbCodigoPeriodo.getSelectedIndex() <= 0 || cmbCodigoAsignatura.getSelectedIndex() <= 0) {
+            lblNumeroGrupo.setText("-");
+            return;
+        }
+
+        String periodo = cmbCodigoPeriodo.getSelectedItem().toString().trim();
+        String asignatura = cmbCodigoAsignatura.getSelectedItem().toString().split(" - ")[0].trim();
+
+        String siguiente = grupoDao.obtenerSiguienteNumero(periodo, asignatura);
+        lblNumeroGrupo.setText(siguiente);
+    }
+
+    public void recargarCombos() {
+        cargarComboPeriodos();
+        cargarComboAsignaturas();
+    }
+
 }

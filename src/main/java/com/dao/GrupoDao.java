@@ -156,4 +156,31 @@ public class GrupoDao {
 
         return g;
     }
+
+    public String obtenerSiguienteNumero(String codigoPeriodo, String codigoAsignatura) {
+        String sql = "SELECT ISNULL(MAX(CAST(numero AS INT)), 0) + 1 AS siguiente "
+                + "FROM Grupo WHERE codigo_periodo = ? AND codigo_asignatura = ?";
+
+        try (Connection con = Conexion.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, codigoPeriodo);
+            ps.setString(2, codigoAsignatura);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int siguiente = rs.getInt("siguiente");
+                    return String.format("%04d", siguiente);
+                }
+            }
+
+        } catch (SQLException ex) {
+            System.out.println("Error al obtener siguiente numero de grupo: " + ex.getMessage());
+        }
+
+        return "0001";
+    }
+
+
+
 }

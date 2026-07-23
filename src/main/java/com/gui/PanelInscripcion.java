@@ -10,17 +10,17 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Pestaña 4: Panel de Inscripción / Prematricula de Materias.
- * Utiliza Selección de Estudiante por JComboBox y Doble Tabla (Disponibles vs Inscritas).
+ * Pestana 4: Panel de Inscripcion / Prematricula de Materias.
+ * Utiliza Seleccion de Estudiante por JComboBox y Doble Tabla (Disponibles vs Inscritas).
  */
 public class PanelInscripcion extends JPanel {
 
-    // --- Componentes de Selección ---
+    // --- Componentes de Seleccion ---
     private JComboBox<String> cmbEstudiante;     // [id_estudiante] - Lista de estudiantes
-    private JComboBox<String> cmbCodigoPeriodo;  // [codigo_periodo] - Lista de períodos
+    private JComboBox<String> cmbCodigoPeriodo;  // [codigo_periodo] - Lista de periodos
 
     // --- Tablas y Modelos ---
-    private JTable tblMateriasDisponibles;       // Materias ofertadas en el período
+    private JTable tblMateriasDisponibles;       // Materias ofertadas en el periodo
     private DefaultTableModel modeloDisponibles;
 
     private JTable tblMateriasInscritas;         // Materias inscritas por el estudiante
@@ -29,6 +29,7 @@ public class PanelInscripcion extends JPanel {
     // --- Botones Centrales ---
     private JButton btnAgregarMateria;
     private JButton btnRetirarMateria;
+    private JButton btnInscribirEstudiante;
 
     // --- DAOs ---
     private final EstudianteDao estudianteDao = new EstudianteDao();
@@ -44,11 +45,12 @@ public class PanelInscripcion extends JPanel {
         inicializarComponentes();
         cargarCombos();
 
-        // --- Listeners de Selección Automática ---
+        // --- Listeners de Seleccion Automatica ---
         cmbEstudiante.addActionListener(e -> cargarTablas());
         cmbCodigoPeriodo.addActionListener(e -> cargarTablas());
 
         // --- Listeners de Botones ---
+        btnInscribirEstudiante.addActionListener(e -> inscribirEstudianteEnPeriodo());
         btnAgregarMateria.addActionListener(e -> inscribirGrupo());
         btnRetirarMateria.addActionListener(e -> retirarGrupo());
     }
@@ -58,16 +60,22 @@ public class PanelInscripcion extends JPanel {
         // 1. PANEL SUPERIOR: Filtros con ComboBoxes
         // ==========================================
         JPanel panelFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
-        panelFiltros.setBorder(BorderFactory.createTitledBorder(" Selección de Estudiante y Período "));
+        panelFiltros.setBorder(BorderFactory.createTitledBorder(" Seleccion de Estudiante y Periodo "));
 
         panelFiltros.add(new JLabel("Estudiante:"));
         cmbEstudiante = new JComboBox<>(new String[]{"-- Seleccionar --"});
         cmbEstudiante.setPreferredSize(new Dimension(300, 25));
         panelFiltros.add(cmbEstudiante);
 
-        panelFiltros.add(new JLabel("Período:"));
+        btnInscribirEstudiante = new JButton("Inscribir Estudiante");
+        btnInscribirEstudiante.setFont(new Font("Arial", Font.BOLD, 12));
+        btnInscribirEstudiante.setBackground(new Color(220, 235, 252));
+        panelFiltros.add(btnInscribirEstudiante);
+
+        panelFiltros.add(new JLabel("Periodo:"));
         cmbCodigoPeriodo = new JComboBox<>(new String[]{"-- Seleccionar --"});
         panelFiltros.add(cmbCodigoPeriodo);
+
 
         // ==========================================
         // 2. TABLAS (Disponibles vs Inscritas)
@@ -98,8 +106,8 @@ public class PanelInscripcion extends JPanel {
         JPanel panelBotonesCentrales = new JPanel();
         panelBotonesCentrales.setLayout(new BoxLayout(panelBotonesCentrales, BoxLayout.Y_AXIS));
 
-        btnAgregarMateria = new JButton("➡️ Inscribir");
-        btnRetirarMateria = new JButton("⬅️ Retirar");
+        btnAgregarMateria = new JButton("Inscribir");
+        btnRetirarMateria = new JButton("Retirar");
 
         panelBotonesCentrales.add(Box.createVerticalGlue());
         panelBotonesCentrales.add(btnAgregarMateria);
@@ -117,7 +125,7 @@ public class PanelInscripcion extends JPanel {
     }
 
     // ==========================================
-    // MÉTODOS DE LÓGICA Y CARGA DE DATOS
+    // METODOS DE LOGICA Y CARGA DE DATOS
     // ==========================================
 
     public void cargarCombos() {
@@ -128,12 +136,16 @@ public class PanelInscripcion extends JPanel {
             cmbEstudiante.addItem(e.getId() + " - " + e.getNombre() + " " + e.getApellio());
         }
 
-        // Cargar Períodos Académicos
+        // Cargar Periodos Academicos
         cmbCodigoPeriodo.removeAllItems();
         cmbCodigoPeriodo.addItem("-- Seleccionar --");
         for (PeriodoAcademico p : periodoDao.listarTodos()) {
             cmbCodigoPeriodo.addItem(p.getCodigo());
         }
+    }
+
+    public void recargarCombos() {
+        cargarCombos();
     }
 
     private String obtenerIdEstudiante() {
@@ -187,7 +199,7 @@ public class PanelInscripcion extends JPanel {
             });
         }
 
-        // Llenar TABLA IZQUIERDA: Grupos Disponibles (del período y que no estén inscritos)
+        // Llenar TABLA IZQUIERDA: Grupos Disponibles (del periodo y que no esten inscritos)
         for (Grupo g : todosLosGrupos) {
             if (g.getCodigoPeriodo().equalsIgnoreCase(periodo)) {
 
@@ -215,7 +227,7 @@ public class PanelInscripcion extends JPanel {
     private void inscribirGrupo() {
         int fila = tblMateriasDisponibles.getSelectedRow();
         if (fila == -1) {
-            JOptionPane.showMessageDialog(this, "⚠️ Seleccione un grupo disponible de la tabla izquierda.");
+            JOptionPane.showMessageDialog(this, "Seleccione un grupo disponible de la tabla izquierda.");
             return;
         }
 
@@ -223,35 +235,60 @@ public class PanelInscripcion extends JPanel {
         String periodo = obtenerPeriodo();
 
         if (idEstudiante == null || periodo == null) {
-            JOptionPane.showMessageDialog(this, "⚠️ Debe seleccionar un Estudiante y un Período.");
+            JOptionPane.showMessageDialog(this, "Debe seleccionar un Estudiante y un Periodo.");
+            return;
+        }
+
+        if (!inscripcionDao.existe(periodo, idEstudiante)) {
+            JOptionPane.showMessageDialog(this,
+                    "Este estudiante debe inscribirse primero en el periodo " + periodo
+                            + ". Presione el boton 'Inscribir Estudiante' antes de agregar materias.",
+                    "Estudiante no inscrito en el periodo", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         String asignatura = modeloDisponibles.getValueAt(fila, 0).toString();
         String grupo = modeloDisponibles.getValueAt(fila, 1).toString();
 
-        // Asegurar registro maestro en Inscripcion si aún no existe
-        if (!inscripcionDao.existe(periodo, idEstudiante)) {
-            Inscripcion nuevaInscripcion = new Inscripcion(periodo, idEstudiante, LocalDate.now());
-            inscripcionDao.insertar(nuevaInscripcion);
-        }
-
-        // Insertar en Grupo_Inscrito
         GrupoInscrito nuevoGrupoInscrito = new GrupoInscrito(periodo, idEstudiante, asignatura, grupo);
         boolean insertado = grupoInscritoDao.insertar(nuevoGrupoInscrito);
 
         if (insertado) {
-            JOptionPane.showMessageDialog(this, "✅ Materia inscrita exitosamente.");
+            JOptionPane.showMessageDialog(this, "Materia inscrita exitosamente.");
             cargarTablas();
         } else {
-            JOptionPane.showMessageDialog(this, "❌ Error al inscribir la materia.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error al inscribir la materia.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void inscribirEstudianteEnPeriodo() {
+        String idEstudiante = obtenerIdEstudiante();
+        String periodo = obtenerPeriodo();
+
+        if (idEstudiante == null || periodo == null) {
+            JOptionPane.showMessageDialog(this, "Debe seleccionar un Estudiante y un Periodo.", "Atencion", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (inscripcionDao.existe(periodo, idEstudiante)) {
+            JOptionPane.showMessageDialog(this, "Este estudiante ya esta inscrito en el periodo " + periodo + ".");
+            return;
+        }
+
+        Inscripcion nuevaInscripcion = new Inscripcion(periodo, idEstudiante, LocalDate.now());
+        boolean insertado = inscripcionDao.insertar(nuevaInscripcion);
+
+        if (insertado) {
+            JOptionPane.showMessageDialog(this, "Estudiante inscrito en el periodo " + periodo + " correctamente.");
+        } else {
+            JOptionPane.showMessageDialog(this, "No se pudo inscribir al estudiante en el periodo.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void retirarGrupo() {
         int fila = tblMateriasInscritas.getSelectedRow();
         if (fila == -1) {
-            JOptionPane.showMessageDialog(this, "⚠️ Seleccione una materia inscrita de la tabla derecha para retirar.");
+            JOptionPane.showMessageDialog(this, "Seleccione una materia inscrita de la tabla derecha para retirar.");
             return;
         }
 
@@ -266,10 +303,10 @@ public class PanelInscripcion extends JPanel {
         boolean eliminado = grupoInscritoDao.eliminar(periodo, idEstudiante, asignatura, grupo);
 
         if (eliminado) {
-            JOptionPane.showMessageDialog(this, "✅ Materia retirada correctamente.");
+            JOptionPane.showMessageDialog(this, "Materia retirada correctamente.");
             cargarTablas();
         } else {
-            JOptionPane.showMessageDialog(this, "❌ No se pudo retirar la materia.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No se pudo retirar la materia.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 

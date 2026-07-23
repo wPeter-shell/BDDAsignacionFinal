@@ -58,10 +58,27 @@ public class MainFrame extends JFrame {
         tabbedPane.addTab("5. Matriz y Reportes",
                 new PanelReportes());
 
+        tabbedPane.addChangeListener(e -> {
+            Component seleccionado = tabbedPane.getSelectedComponent();
+
+            if (seleccionado instanceof PanelInscripcion) {
+                ((PanelInscripcion) seleccionado).recargarCombos();
+            }
+            if (seleccionado instanceof PanelHorarios) {
+                ((PanelHorarios) seleccionado).recargarCombos();
+            }
+            if (seleccionado instanceof PanelReportes) {
+                ((PanelReportes) seleccionado).recargarCombos();
+            }
+        });
+
         // Agregar al contenedor
         panelContenedor.add(panelHeader, BorderLayout.NORTH);
         panelContenedor.add(tabbedPane, BorderLayout.CENTER);
 
         add(panelContenedor);
     }
+
+
+
 }

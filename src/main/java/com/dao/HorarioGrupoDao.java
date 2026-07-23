@@ -109,7 +109,7 @@ public class HorarioGrupoDao {
     }
 
     public boolean eliminar(String codigoPeriodo, String codigoAsignatura, String numeroGrupo, int dia, java.time.LocalTime horaInicio) {
-        String sql = "DELETE FROM Horario_Grupo WHERE codigo_periodo = ? AND codigo_asignatura = ? AND numero_grupo = ? AND dia = ? AND hora_inicio = ?";
+        String sql = "DELETE FROM Horario_Grupo WHERE codigo_periodo = ? AND codigo_asignatura = ? AND numero_grupo = ? AND dia = ? AND hora_inicio = CAST(? AS TIME)";
 
         try (Connection con = Conexion.conectar();
              PreparedStatement ps = con.prepareStatement(sql)) {
